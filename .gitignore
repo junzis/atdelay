@@ -1,0 +1,6 @@
+data/
+*.csv
+*.csv.gz
+*.zip
+.vscode
+.pdf
