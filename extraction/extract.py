@@ -53,7 +53,7 @@ def readCSV(file, hello):
 
 
 def extractData(
-    start: datetime, end: datetime, airports: list = ICAOTOP1, folderName="data"
+    start: datetime, end: datetime, airports: list = ICAOTOP1, folderName="data", europeanFlights=False
 ):
 
     # Basic input validation
@@ -118,12 +118,16 @@ def extractData(
 
         # P = P[(P["ADEP"].isin(airports)) | (P["ADES"].isin(airports))]
         P = P[(P["ADEP"].isin(airports))]
+        if europeanFlights:
+            P = P[(P["ADEP"].str[0].isin(["E", "B", "L", "U"])) & (P["ADES"].str[0].isin(["E", "B", "L", "U"]))]
 
         # This is kinda wonky atm
         P = P[
             (P["FILED OFF BLOCK TIME"] >= start) | (P["ACTUAL OFF BLOCK TIME"] >= start)
         ]
         P = P[(P["FILED ARRIVAL TIME"] <= end) | (P["ACTUAL ARRIVAL TIME"] <= end)]
+
+
 
         finalData = finalData.append(P, ignore_index=True)
 
@@ -134,8 +138,14 @@ def extractData(
 
 
 def delayCalc(P):
-    P["delay"] = P["ACTUAL ARRIVAL TIME"] - P["FILED ARRIVAL TIME"]
-    P["delayMinutes"] = P["delay"].astype("timedelta64[m]")
+    P["arrivalDelay"] = P["ACTUAL ARRIVAL TIME"] - P["FILED ARRIVAL TIME"]
+    P["blockoffDelay"] = P["ACTUAL OFF BLOCK TIME"] - P["FILED OFF BLOCK TIME"]
+    P["flightTimeDifference"] = (P["ACTUAL ARRIVAL TIME"] - P["ACTUAL OFF BLOCK TIME"]) - (P["FILED ARRIVAL TIME"] - P["FILED OFF BLOCK TIME"])
+    P["arrivalDelayMinutes"] = P["arrivalDelay"].astype("timedelta64[m]")
+    P["blockoffDelayMinutes"] = P["blockoffDelay"].astype("timedelta64[m]")
+    P["flightTimeDelayMinutes"] = P["flightTimeDifference"].astype("timedelta64[m]")
+
+    P["On Time"] =  (P["arrivalDelayMinutes"]).abs() < 15.0
 
     return P
 
@@ -143,9 +153,9 @@ def delayCalc(P):
 if __name__ == "__main__":
     start = datetime(2016, 1, 1)
     end = datetime(2016, 12, 31)
-    airports = ICAOTOP25
+    airports = ICAOTOP10
     print(f"Testing {len(airports)} Airports.")
-    a = extractData(start, end, airports)
+    a = extractData(start, end, airports, europeanFlights=True)
     # print(a.iloc[0]["FILED OFF BLOCK TIME"])
     a = delayCalc(a)
     # print(a[['FILED ARRIVAL TIME', 'ACTUAL ARRIVAL TIME', "delay", "delayMinutes"]].head(50))
@@ -154,11 +164,22 @@ if __name__ == "__main__":
     # print(a["delayMinutes"].max())
     # print(a["delayMinutes"].min())
     lstofData = []
+    print(a["AC Operator"].head(50))
     for airport in airports:
-        lstofData.append(a[a["ADEP"] == airport]["delayMinutes"].to_numpy())
+        lstofData.append(a[a["ADEP"] == airport]["blockoffDelayMinutes"].to_numpy())
         # plt.boxplot(a[a["ADEP"] == airport]["delayMinutes"].to_numpy(),
         #             showfliers=False, labels=[airport])
     plt.boxplot(lstofData, showfliers=False, labels=airports)
+
+    klmOnTimePCT = len(a[(a["AC Operator"] == "KLM")  & (a["On Time"] == True)]) / len(a[(a["AC Operator"] == "KLM")])
+    totalKLMFlights = len(a[(a["AC Operator"] == "KLM")])
+    RYROnTimePCT = len(a[(a["AC Operator"] == "RYR")  & (a["On Time"] == True)]) / len(a[(a["AC Operator"] == "RYR")])
+    totalRYRFlights = len(a[(a["AC Operator"] == "RYR")])
+    WZZOnTimePCT = len(a[(a["AC Operator"] == "WZZ")  & (a["On Time"] == True)]) / len(a[(a["AC Operator"] == "WZZ")])
+    totalWZZFlights = len(a[(a["AC Operator"] == "WZZ")])
+    print(f"KLM is on time: {round(klmOnTimePCT, 5)*100}% of the time in european flights ({totalKLMFlights} flights total)")
+    print(f"RyanAir is on time: {round(RYROnTimePCT, 5)*100}% of the time in european flights ({totalRYRFlights} flights total)")
+    print(f"Wizz Air is on time: {round(WZZOnTimePCT, 5)*100}% of the time in european flights ({totalWZZFlights} flights total)")
     plt.suptitle("Delay in minutes from departing airports")
     plt.grid()
     plt.show()
