@@ -8,6 +8,10 @@ from sklearn.svm import SVR
 from sklearn.neighbors import KNeighborsRegressor
 
 
+# Define type of an sklearn model for the type hints
+ModelRegressor = Union[KNeighborsRegressor, SVR]
+
+
 def split_into_folds(X: np.array, y: np.array, n_folds: int):
     """splits the data into n amount of folds
 
@@ -24,12 +28,12 @@ def split_into_folds(X: np.array, y: np.array, n_folds: int):
             [y[i * interval:(i + 1) * interval] for i in range(n_folds)])
 
 
-def double_cross_validation(model, parameters: dict, X_train: np.array, y_train: np.array, score_func, inner_folds: int=3,
+def double_cross_validation(model: ModelRegressor, parameters: dict, X_train: np.array, y_train: np.array, score_func, inner_folds: int=3,
                             outer_folds: int=10, print_performance: bool=True):
     """[summary]
 
     Args:
-        model (dict): dictionary with model name and function for model as key
+        model (ModelRegressor): sklearn model
         parameters (dict): dictionary with model name and dict as key with in that all hyper-parameters
         X_train (np.array): Training + test data
         y_train (np.array): labels corresponding to training data
