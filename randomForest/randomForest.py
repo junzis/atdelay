@@ -1,5 +1,5 @@
 from sklearn.metrics import mean_squared_error
-from sklearn.ensemle import RandomForestRegressor
+from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import GridSearchCV
 from sklearn.model_selection import KFold
 import matplotlib.pyplot as plt

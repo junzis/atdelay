@@ -45,5 +45,5 @@ def best_model():
     Returns:
         int: The degree of the polynomial with the best score
     """    
-    return grid_search.best_params_["degree"]
+    return int(grid_search.best_params_["degree"])
 
