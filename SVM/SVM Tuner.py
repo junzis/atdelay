@@ -29,14 +29,14 @@ def double_cross_validation(model, parameters: dict, X_train: np.array, y_train:
     """[summary]
 
     Args:
-        model ([type]): [description]
-        parameters (dict): [description]
-        X_train (np.array): [description]
-        y_train (np.array): [description]
-        score_func ([type]): [description]
-        inner_folds (int, optional): [description]. Defaults to 3.
-        outer_folds (int, optional): [description]. Defaults to 10.
-        print_performance (bool, optional): [description]. Defaults to True.
+        model (dict): dictionary with model name and function for model as key
+        parameters (dict): dictionary with model name and dict as key with in that all hyper-parameters
+        X_train (np.array): Training + test data
+        y_train (np.array): labels corresponding to training data
+        score_func (function): which score function should be used to calculate the score of the model
+        inner_folds (int, optional): amount of inner folds used for nested cross validation. Defaults to 3.
+        outer_folds (int, optional): amount of outer folds used for nested cross validation. Defaults to 10.
+        print_performance (bool, optional): Choose if python should print best performing perameters for each model. Defaults to True.
 
     Returns:
         performance_score, st_dev, best_parameters [type]: [description]
