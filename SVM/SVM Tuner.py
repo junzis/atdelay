@@ -8,6 +8,10 @@ from sklearn.svm import SVR
 from sklearn.neighbors import KNeighborsRegressor
 
 
+# Define type of an sklearn model for the type hints
+ModelRegressor = Union[KNeighborsRegressor, SVR]
+
+
 def split_into_folds(X: np.array, y: np.array, n_folds: int):
     """splits the data into n amount of folds
 
@@ -24,19 +28,19 @@ def split_into_folds(X: np.array, y: np.array, n_folds: int):
             [y[i * interval:(i + 1) * interval] for i in range(n_folds)])
 
 
-def double_cross_validation(model, parameters: dict, X_train: np.array, y_train: np.array, score_func, inner_folds: int=3,
+def double_cross_validation(model: ModelRegressor, parameters: dict, X_train: np.array, y_train: np.array, score_func, inner_folds: int=3,
                             outer_folds: int=10, print_performance: bool=True):
     """[summary]
 
     Args:
-        model ([type]): [description]
-        parameters (dict): [description]
-        X_train (np.array): [description]
-        y_train (np.array): [description]
-        score_func ([type]): [description]
-        inner_folds (int, optional): [description]. Defaults to 3.
-        outer_folds (int, optional): [description]. Defaults to 10.
-        print_performance (bool, optional): [description]. Defaults to True.
+        model (ModelRegressor): sklearn model
+        parameters (dict): dictionary with model name and dict as key with in that all hyper-parameters
+        X_train (np.array): Training + test data
+        y_train (np.array): labels corresponding to training data
+        score_func (function): which score function should be used to calculate the score of the model
+        inner_folds (int, optional): amount of inner folds used for nested cross validation. Defaults to 3.
+        outer_folds (int, optional): amount of outer folds used for nested cross validation. Defaults to 10.
+        print_performance (bool, optional): Choose if python should print best performing perameters for each model. Defaults to True.
 
     Returns:
         performance_score, st_dev, best_parameters [type]: [description]
