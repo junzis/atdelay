@@ -4,3 +4,5 @@ data/
 *.zip
 .vscode
 *.pdf
+LRData
+__pycache__
