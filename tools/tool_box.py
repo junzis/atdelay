@@ -22,12 +22,16 @@ import sys
 # sklearnModel = np.union[
 #     SVR, RandomForestRegressor, KNeighborsRegressor, LinearRegression
 # ]
-def filtering_data_onehot(filename):
+def filtering_data_onehot(
+    filename: str,
+    start: datetime = datetime(2015, 12, 31),
+    end: datetime = datetime(2015, 12, 31),
+):
     dform = "%Y-%m-%d %H:%M:%S"
 
     df = pd.read_csv(filename, header=0, index_col=0)
     df = df.assign(FiledOBT=lambda x: pd.to_datetime(x.FiledOBT, format=dform))
-    df = data_filter(df, start=datetime(2016, 3, 1), end=datetime(2016, 3, 2))
+    df = data_filter(df, start, end)
     new_df = df.drop(["FiledOBT", "FiledAT"], axis=1)
     new_df2 = new_df.drop(["ArrivalDelay", "DepartureDelay"], axis=1)
 
@@ -38,19 +42,27 @@ def filtering_data_onehot(filename):
     y = df["ArrivalDelay"].to_numpy()
 
     pd.DataFrame(X_scaled_array).to_csv(
-        "scaled_2016_encoded_data.csv", header=False, index=False
+        "tools/scaled_encoded_data.csv", header=False, index=False
     )
-    pd.DataFrame(y).to_csv("y_2016_data.csv", header=False, index=False)
+    # pd.DataFrame(y).to_csv("y_2016_data.csv", header=False, index=False)
+    pd.DataFrame((X_scaled_array)).to_csv(
+        "tools.xdata.csv", header=False, index=False
+    )
+    pd.DataFrame((y)).to_csv("tools/ydata.csv", header=False, index=False)
 
     return y, X_scaled_array
 
 
-def filtering_data_ordinal_enc(filename):
+def filtering_data_ordinal_enc(
+    filename: str = "LRData/LRDATA.csv",
+    start: datetime = datetime(2019, 1, 1),
+    end: datetime = datetime(2019, 12, 31),
+):
     dform = "%Y-%m-%d %H:%M:%S"
 
     df = pd.read_csv(filename, header=0, index_col=0)
     df = df.assign(FiledOBT=lambda x: pd.to_datetime(x.FiledOBT, format=dform))
-    df = data_filter(df, start=datetime(2016, 1, 1), end=datetime(2016, 6, 2))
+    df = data_filter(df, start, end)
     new_df = df.drop(["FiledOBT", "FiledAT"], axis=1)
     new_df2 = new_df.drop(["ArrivalDelay", "DepartureDelay"], axis=1)
 
@@ -66,14 +78,21 @@ def filtering_data_ordinal_enc(filename):
     X_scaled_array = scaler.fit_transform(encoded_array)
     y = df["ArrivalDelay"].to_numpy()
 
-    pd.DataFrame((X_scaled_array)).to_csv("xdata.csv", header=False, index=False)
-    pd.DataFrame((y)).to_csv("ydata.csv", header=False, index=False)
+    pd.DataFrame((X_scaled_array)).to_csv("tools/xdata.csv", header=False, index=False)
+    pd.DataFrame((y)).to_csv("tools/ydata.csv", header=False, index=False)
 
     # print(X_scaled_array)
     print("-------------Data filtering Done-----------------")
     # pd.DataFrame(scaled_array).to_csv("scaled_2016_encoded_data.txt", header=False, index=False)
 
-    return y, X_scaled_array
+    return X_scaled_array, y
+
+
+def get_data():
+    X = np.genfromtxt("tools/xdata.csv", delimiter=",")
+    y = np.genfromtxt("tools/ydata.csv", delimiter=",")
+
+    return X, y
 
 
 def data_filter(P: pd.DataFrame, start: datetime, end: datetime):
@@ -105,11 +124,23 @@ def parameter_search(
 
     cv = KFold(n_splits=n_folds, random_state=42, shuffle=True)
     grid_search = GridSearchCV(
-        model, parameters, cv=cv, n_jobs=-1, verbose=4, scoring=score_string
+        model, parameters, cv=cv, n_jobs=-1, verbose=4, scoring=score_string,
     ).fit(X_train, y_train)
 
-    best_parameters = 0
-    return best_parameters, grid_search.cv_results_
+    print("grid search", grid_search)
+    print("best params", grid_search.bestparams)
+    print("refit time", grid_search.refittime)
+    df = pd.DataFrame(grid_search.cvresults)
+    y_values = df.to_numpy()[:, -3]
+    plt.plot(parameters['n_neighbors'], y_values * -1)
+    ymin = np.max(y_values)
+    plt.scatter(16, ymin * -1, color = 'red')
+    plt.xlabel('K')
+    plt.ylabel('MSE')
+    plt.show()
+
+    best_parameters = grid_search.bestparams
+    return best_parameters
 
 
 def split_into_folds(X: np.array, y: np.array, n_folds: int):
