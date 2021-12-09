@@ -5,3 +5,4 @@ data/
 .vscode
 *.pdf
 LRData
+__pycache__
