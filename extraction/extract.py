@@ -156,7 +156,7 @@ def linearRegressionFormat(P: pd.DataFrame, airports: list = ICAOTOP50):
     P["filedATminutes"] = P["FiledAT"].dt.hour * 60 + P["FiledAT"].dt.minute
     P["filedOBTminutes"] = P["FiledOBT"].dt.hour * 60 + P["FiledOBT"].dt.minute
 
-    P = P.drop(["FiledOBT", "FiledAT"], axis=1)
+    # P = P.drop(["FiledOBT", "FiledAT"], axis=1)
 
     return P
 
