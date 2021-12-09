@@ -161,7 +161,13 @@ def linearRegressionFormat(P: pd.DataFrame, airports: list = ICAOTOP50):
     return P
 
 
-def saveToCSV(P: pd.DataFrame, saveFolder: str = "LRData"):
+def generalFilter(P, airports):
+    P = filterAirports(P, airports)
+    P = calculateDelays(P)
+    return P
+
+
+def saveToCSV(P: pd.DataFrame, saveFile, saveFolder: str = "LRData"):
     """Convert the flights dataframe to a CSV
 
     Args:
@@ -171,10 +177,10 @@ def saveToCSV(P: pd.DataFrame, saveFolder: str = "LRData"):
 
     if not os.path.exists(saveFolder):
         os.mkdir(os.path.join(saveFolder))
-    P.to_csv(f"{saveFolder}/LRDATA.csv")
+    P.to_csv(f"{saveFolder}/{saveFile}.csv")
 
 
-def readLRDATA(saveFolder: str = "LRData", fileName: str = "LRDATA.csv"):
+def readCSV(saveFolder: str = "LRData", fileName: str = "LRDATA.csv"):
     """Read data from a flights dataframe in linear regression format
 
     Args:
@@ -188,7 +194,7 @@ def readLRDATA(saveFolder: str = "LRData", fileName: str = "LRDATA.csv"):
     P = pd.read_csv(fullfilename, header=0, index_col=0)
     return P
 
-  
+
 if __name__ == "__main__":
     start = datetime(2015, 1, 1)
     end = datetime(2019, 4, 30)
@@ -196,8 +202,7 @@ if __name__ == "__main__":
     print(f"Generating for {len(airports)} Airports")
 
     a = extractData(start, end)
-    a = linearRegressionFormat(a, airports)
-    saveToCSV(a)
+    # a = linearRegressionFormat(a, airports)
+    a = generalFilter(a, airports)
+    saveToCSV(a, "general", "filteredData")
 
-    print(readLRDATA().head(50))
-    print(len(a))
