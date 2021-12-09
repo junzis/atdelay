@@ -1,7 +1,7 @@
 from re import L
 import pandas as pd
-from sklearn.preprocessing import StandardScaler
-from sklearn.preprocessing import OneHotEncoder
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import OrdinalEncoder
 from sklearn.model_selection import KFold
 from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import get_scorer
@@ -10,35 +10,52 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.neighbors import KNeighborsRegressor
 from sklearn.linear_model import LinearRegression
 import numpy as np
+from datetime import datetime
+
+import sys
+
+# sys.path.append(".")
+# from extraction.extract import readLRDATA
 
 
 # Define type of sklearn models for type hints
-sklearnModel = np.Union[SVR, RandomForestRegressor, KNeighborsRegressor, LinearRegression]
+# sklearnModel = np.union[
+#     SVR, RandomForestRegressor, KNeighborsRegressor, LinearRegression
+# ]
 
 
-def missing_values(filename: str):
-    df = pd.read_csv(filename)
-    df.dropna(inplace=True)
-    return df
+def filtering_data(filename):
+    dform = "%Y-%m-%d %H:%M:%S"
+
+    df = pd.read_csv(filename, header=0, index_col=0)
+    df = df.assign(FiledOBT=lambda x: pd.to_datetime(x.FiledOBT, format=dform))
+    df = data_filter(df, start = datetime(2016, 1, 1), end = datetime(2016, 12, 31))
+    new_df = df.drop(["FiledOBT", "FiledAT"], axis=1)
+    new_df2 = new_df.drop(["ArrivalDelay", "DepartureDelay"], axis=1)
+
+    new_df3 = pd.get_dummies(new_df2, columns=new_df2.columns[:6])
+    encoded_array = new_df3.to_numpy()
+    scaler = MinMaxScaler()
+    X_scaled_array = scaler.fit_transform(encoded_array)
+    y = df["ArrivalDelay"].to_numpy()
+
+    # pd.DataFrame(scaled_array).to_csv("scaled_2016_encoded_data.txt", header=False, index=False)
+
+    return y, X_scaled_array
 
 
-def data_encoding(df: pd.DataFrame):
-    enc = OneHotEncoder()
-    df.to_numpy()
-    enc.fit_transform(df)
-    return df
+def data_filter(P: pd.DataFrame, start: datetime, end: datetime):
+    P = P.query("FiledOBT <= @end & FiledOBT >= @start ")
+    return P
 
-
-def data_scaling(array: np.array):        
-    try:
-        scaler = StandardScaler()
-        scaler.fit_transform(array)
-        return array
-    except ValueError:
-        print("Encode the dataframe first")
-
-
-def parameter_search(model: sklearnModel, parameters: dict, X_train: np.array, y_train: np.array, score_string: str = "neg_mean_squared_error", n_folds: int=5):
+def parameter_search(
+    model,
+    parameters: dict,
+    X_train: np.array,
+    y_train: np.array,
+    score_string: str = "neg_mean_squared_error",
+    n_folds: int = 5,
+):
     """Optimizes parameters of model using cross-validation.
 
     Args:
@@ -51,8 +68,8 @@ def parameter_search(model: sklearnModel, parameters: dict, X_train: np.array, y
 
     Returns:
         dict: optimal parameters for model
-    """    
-    
+    """
+
     cv = KFold(n_splits=n_folds, random_state=42, shuffle=True)
     grid_search = GridSearchCV(
         model, parameters, cv=cv, n_jobs=-1, verbose=4, scoring=score_string
@@ -73,14 +90,24 @@ def split_into_folds(X: np.array, y: np.array, n_folds: int):
 
     Returns:
         tuple(list, list): [description]
-    """    
+    """
     interval = len(y) // n_folds
-    return ([X[i * interval:(i + 1) * interval] for i in range(n_folds)],
-            [y[i * interval:(i + 1) * interval] for i in range(n_folds)])
+    return (
+        [X[i * interval : (i + 1) * interval] for i in range(n_folds)],
+        [y[i * interval : (i + 1) * interval] for i in range(n_folds)],
+    )
 
 
-def double_cross_validation(model: sklearnModel, parameters: dict, X_train: np.array, y_train: np.array, score_string: str="neg_mean_squared_error", inner_folds: int=3,
-                            outer_folds: int=10, print_performance: bool=True):
+def double_cross_validation(
+    model,
+    parameters: dict,
+    X_train: np.array,
+    y_train: np.array,
+    score_string: str = "neg_mean_squared_error",
+    inner_folds: int = 3,
+    outer_folds: int = 10,
+    print_performance: bool = True,
+):
     """Tunes and evaluates the performance of a model using double (nested) cross-validation.
 
     Args:
@@ -95,7 +122,7 @@ def double_cross_validation(model: sklearnModel, parameters: dict, X_train: np.a
 
     Returns:
         performance_score, st_dev, best_parameters [type]: [description]
-    """    
+    """
 
     scores = []
     best_parameters = {}
@@ -103,13 +130,27 @@ def double_cross_validation(model: sklearnModel, parameters: dict, X_train: np.a
     X_folds, y_folds = split_into_folds(X_train, y_train, n_folds=outer_folds)
     for i, (X_fold_test, y_fold_test) in enumerate(zip(X_folds, y_folds)):
         # Split the data up into test fold and training data
-        X_fold_train = np.concatenate([X_folds[k] for k in range(outer_folds) if k != i])
-        y_fold_train = np.concatenate([y_folds[k] for k in range(outer_folds) if k != i])
+        X_fold_train = np.concatenate(
+            [X_folds[k] for k in range(outer_folds) if k != i]
+        )
+        y_fold_train = np.concatenate(
+            [y_folds[k] for k in range(outer_folds) if k != i]
+        )
 
         # Perform inner cross validation to tune the model
-        grid_search = GridSearchCV(model, parameters, cv=KFold(n_splits=inner_folds), shuffle=True, scoring=score_string, n_jobs=-1)
+        grid_search = GridSearchCV(
+            model,
+            parameters,
+            cv=KFold(n_splits=inner_folds),
+            shuffle=True,
+            scoring=score_string,
+            n_jobs=-1,
+        )
         grid_search.fit(X_fold_train, y_fold_train)
-        best_model, hyperparameters = grid_search.best_estimator_, grid_search.best_params_
+        best_model, hyperparameters = (
+            grid_search.best_estimator_,
+            grid_search.best_params_,
+        )
 
         # Evaluate model
         predictions = best_model.predict(X_fold_test)
@@ -133,7 +174,8 @@ def double_cross_validation(model: sklearnModel, parameters: dict, X_train: np.a
 
     if print_performance:
         print(
-            f'{score_func.__name__.replace("_", " ")}: {round(performance_score, 3)}, st_dev: {round(st_dev, 5)}')
-        print(f'Tuned parameters: {best_parameters}')
+            f'{score_func.__name__.replace("_", " ")}: {round(performance_score, 3)}, st_dev: {round(st_dev, 5)}'
+        )
+        print(f"Tuned parameters: {best_parameters}")
 
     return best_parameters, performance_score, st_dev

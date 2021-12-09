@@ -188,7 +188,7 @@ def readLRDATA(saveFolder: str = "LRData", fileName: str = "LRDATA.csv"):
     P = pd.read_csv(fullfilename, header=0, index_col=0)
     return P
 
-  
+
 if __name__ == "__main__":
     start = datetime(2015, 1, 1)
     end = datetime(2019, 4, 30)
