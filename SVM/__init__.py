@@ -1,1 +1,1 @@
-from . import SVM
+from . import SVR
