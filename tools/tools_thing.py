@@ -22,14 +22,12 @@ import sys
 # sklearnModel = np.union[
 #     SVR, RandomForestRegressor, KNeighborsRegressor, LinearRegression
 # ]
-
-
-def filtering_data(filename):
+def filtering_data_onehot(filename):
     dform = "%Y-%m-%d %H:%M:%S"
 
     df = pd.read_csv(filename, header=0, index_col=0)
     df = df.assign(FiledOBT=lambda x: pd.to_datetime(x.FiledOBT, format=dform))
-    df = data_filter(df, start = datetime(2016, 1, 1), end = datetime(2016, 12, 31))
+    df = data_filter(df, start=datetime(2016, 3, 1), end=datetime(2016, 3, 2))
     new_df = df.drop(["FiledOBT", "FiledAT"], axis=1)
     new_df2 = new_df.drop(["ArrivalDelay", "DepartureDelay"], axis=1)
 
@@ -39,6 +37,40 @@ def filtering_data(filename):
     X_scaled_array = scaler.fit_transform(encoded_array)
     y = df["ArrivalDelay"].to_numpy()
 
+    pd.DataFrame(X_scaled_array).to_csv(
+        "scaled_2016_encoded_data.csv", header=False, index=False
+    )
+    pd.DataFrame(y).to_csv("y_2016_data.csv", header=False, index=False)
+
+    return y, X_scaled_array
+
+
+def filtering_data_ordinal_enc(filename):
+    dform = "%Y-%m-%d %H:%M:%S"
+
+    df = pd.read_csv(filename, header=0, index_col=0)
+    df = df.assign(FiledOBT=lambda x: pd.to_datetime(x.FiledOBT, format=dform))
+    df = data_filter(df, start=datetime(2016, 1, 1), end=datetime(2016, 6, 2))
+    new_df = df.drop(["FiledOBT", "FiledAT"], axis=1)
+    new_df2 = new_df.drop(["ArrivalDelay", "DepartureDelay"], axis=1)
+
+    new_df3 = new_df2.to_numpy()
+    to_be_enc = new_df3[:, :6]
+
+    enc = OrdinalEncoder()
+
+    encoded_part = enc.fit_transform(to_be_enc)
+    encoded_array = np.concatenate((encoded_part, new_df3[:, 6:]), axis=1)
+    # print(f"Encoded array = {encoded_array}")
+    scaler = MinMaxScaler()
+    X_scaled_array = scaler.fit_transform(encoded_array)
+    y = df["ArrivalDelay"].to_numpy()
+
+    pd.DataFrame((X_scaled_array)).to_csv("xdata.csv", header=False, index=False)
+    pd.DataFrame((y)).to_csv("ydata.csv", header=False, index=False)
+
+    # print(X_scaled_array)
+    print("-------------Data filtering Done-----------------")
     # pd.DataFrame(scaled_array).to_csv("scaled_2016_encoded_data.txt", header=False, index=False)
 
     return y, X_scaled_array
@@ -47,6 +79,7 @@ def filtering_data(filename):
 def data_filter(P: pd.DataFrame, start: datetime, end: datetime):
     P = P.query("FiledOBT <= @end & FiledOBT >= @start ")
     return P
+
 
 def parameter_search(
     model,
@@ -75,8 +108,8 @@ def parameter_search(
         model, parameters, cv=cv, n_jobs=-1, verbose=4, scoring=score_string
     ).fit(X_train, y_train)
 
-    best_parameters = grid_search.best_params_
-    return best_parameters
+    best_parameters = 0
+    return best_parameters, grid_search.cv_results_
 
 
 def split_into_folds(X: np.array, y: np.array, n_folds: int):
