@@ -4,7 +4,7 @@ from sklearn.preprocessing import OneHotEncoder
 import numpy as np
 
 
-def missing_values(filename: string):
+def missing_values(filename: str):
     df = pd.read_csv(filename)
     df.dropna(inplace=True)
     return df
