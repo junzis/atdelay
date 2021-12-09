@@ -19,7 +19,7 @@ models = {
 
 model_parameters = {
     "KNearestNeighbor": {
-        'n_neighbors' : range(0, 100, 10), 'weights' : ["distance", "uniform"]
+        'n_neighbors' : range(1, 100, 1), 'weights' : ["uniform"]
     },
     "SVM": {
         'C' : [0.001, 0.01, 0.1, 1, 10], 'kernel' : ['linear', 'poly', 'rbf', 'sigmoid']
