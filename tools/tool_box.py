@@ -27,15 +27,19 @@ def filtering_data_onehot(
     filename: str,
     start: datetime = datetime(2015, 12, 31),
     end: datetime = datetime(2015, 12, 31),
+    airport: str = None
 ):
     dform = "%Y-%m-%d %H:%M:%S"
 
     df = pd.read_csv(filename, header=0, index_col=0)
     df = df.assign(FiledOBT=lambda x: pd.to_datetime(x.FiledOBT, format=dform))
-    df = data_filter(df, start, end)
-    new_df = df.drop(["FiledOBT", "FiledAT", "ACType", "ArrivalDelay", "DepartureDelay"], axis=1)
-
-    new_df3 = pd.get_dummies(new_df, columns=new_df.columns[:5])
+    df = data_filter(df, start, end, airport)
+    if airport == None:
+        new_df = df.drop(["FiledOBT", "FiledAT", "ACType", "ArrivalDelay", "DepartureDelay"], axis=1)
+        new_df3 = pd.get_dummies(new_df, columns=new_df.columns[:5])
+    else:
+        new_df = df.drop(["ADES", "FiledOBT", "FiledAT", "ACType", "ArrivalDelay", "DepartureDelay"], axis=1)
+        new_df3 = pd.get_dummies(new_df, columns=new_df.columns[:4])
     encoded_array = new_df3.to_numpy()
     scaler = MinMaxScaler()
     X_scaled_array = scaler.fit_transform(encoded_array)
@@ -95,10 +99,12 @@ def get_data():
     return X, y
 
 
-def data_filter(P: pd.DataFrame, start: datetime, end: datetime):
-    P = P.query("FiledOBT <= @end & FiledOBT >= @start ")
+def data_filter(P: pd.DataFrame, start: datetime, end: datetime, airport):
+    P = P.query("FiledOBT <= @end & FiledOBT >= @start & ArrivalDelay < 60 & ArrivalDelay > -30 & ADES != ADEP")
+    if airport != None:
+        P = P.query("ADES == @airport")
+    
     return P
-
 
 def parameter_search(
     model,
@@ -244,4 +250,4 @@ def double_cross_validation(
 
     return best_parameters, performance_score, st_dev
 
-filtering_data_onehot('./LRDATA/LRDATA.csv', datetime(2019, 1, 1), datetime(2019, 4, 1))
+filtering_data_onehot('./LRDATA/LRDATA.csv', datetime(2018, 1, 1), datetime(2019, 12, 1), None)
