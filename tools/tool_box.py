@@ -12,7 +12,6 @@ from sklearn.linear_model import LinearRegression
 import numpy as np
 from datetime import datetime
 import matplotlib.pyplot as plt
-
 import sys
 
 # sys.path.append(".")
@@ -27,34 +26,42 @@ def filtering_data_onehot(
     filename: str,
     start: datetime = datetime(2015, 12, 31),
     end: datetime = datetime(2015, 12, 31),
-    airport: str = None
+    airport: str = None,
 ):
-    dform = "%Y-%m-%d %H:%M:%S"
-
     df = pd.read_csv(filename, header=0, index_col=0)
-    df = df.assign(FiledOBT=lambda x: pd.to_datetime(x.FiledOBT, format=dform))
-    df = data_filter(df, start, end, airport)
+    df_2 = data_filter(df, start, end, airport)
+    df_3 = dummies_encode(df_2, airport)
+    X_final = scaler(df_3)
+    y = df_2["ArrivalDelay"].to_numpy()
+
+    pd.DataFrame((X_scaled_array)).to_csv("tools/xdata.csv", header=False, index=False)
+    pd.DataFrame((y)).to_csv("tools/ydata.csv", header=False, index=False)
+    return X_final
+
+
+def dummies_encode(P: pd.DataFrame, airport):
     if airport == None:
-        new_df = df.drop(["FiledOBT", "FiledAT", "ACType", "ArrivalDelay", "DepartureDelay"], axis=1)
+        new_df = P.drop(
+            ["FiledOBT", "FiledAT", "ACType", "ArrivalDelay", "DepartureDelay"], axis=1
+        )
         new_df3 = pd.get_dummies(new_df, columns=new_df.columns[:5])
+
     else:
-        new_df = df.drop(["ADES", "FiledOBT", "FiledAT", "ACType", "ArrivalDelay", "DepartureDelay"], axis=1)
+        new_df = P.drop(
+            ["ADES", "FiledOBT", "FiledAT", "ACType", "ArrivalDelay", "DepartureDelay"],
+            axis=1,
+        )
         new_df3 = pd.get_dummies(new_df, columns=new_df.columns[:4])
-    encoded_array = new_df3.to_numpy()
+
+    return new_df3
+
+
+def scaler(P: pd.DataFrame):
+    encoded_array = P.to_numpy()
     scaler = MinMaxScaler()
     X_scaled_array = scaler.fit_transform(encoded_array)
-    y = df["ArrivalDelay"].to_numpy()
 
-    pd.DataFrame((new_df3)).to_csv(
-        "tools/finaldf.csv", header=True, index=False
-    )
-
-    pd.DataFrame((X_scaled_array)).to_csv(
-        "tools/xdata.csv", header=False, index=False
-    )
-    pd.DataFrame((y)).to_csv("tools/ydata.csv", header=False, index=False)
-
-    return y, X_scaled_array
+    return X_scaled_array
 
 
 def filtering_data_ordinal_enc(
@@ -99,12 +106,26 @@ def get_data():
     return X, y
 
 
-def data_filter(P: pd.DataFrame, start: datetime, end: datetime, airport):
-    P = P.query("FiledOBT <= @end & FiledOBT >= @start & ArrivalDelay < 90 & ArrivalDelay > -30 & ADES != ADEP")
+def data_filter(P: pd.DataFrame, start: datetime, end: datetime, airport: str):
+    dform = "%Y-%m-%d %H:%M:%S"
+    P = P.assign(FiledOBT=lambda x: pd.to_datetime(x.FiledOBT, format=dform)).query(
+        "FiledOBT <= @end & FiledOBT >= @start & ArrivalDelay < 90 & ArrivalDelay > -30 & ADES != ADEP"
+    )
     if airport != None:
         P = P.query("ADES == @airport")
+
+    return P
+
+def data_filter_ADEPADES(P: pd.DataFrame, start: datetime, end: datetime, airport: str):
+    dform = "%Y-%m-%d %H:%M:%S"
+    P = P.assign(FiledOBT=lambda x: pd.to_datetime(x.FiledOBT, format=dform)).query(
+        "FiledOBT <= @end & FiledOBT >= @start & ArrivalDelay < 90 & ArrivalDelay > -30 & ADES != ADEP"
+    )
+    if airport != None:
+        P = P.query("ADES == @airport |ADEP == @airport ")
     
     return P
+
 
 def parameter_search(
     model,
@@ -138,11 +159,11 @@ def parameter_search(
     print("refit time", grid_search.refittime)
     df = pd.DataFrame(grid_search.cvresults)
     y_values = df.to_numpy()[:, -3]
-    plt.plot(parameters['n_neighbors'], y_values * -1)
+    plt.plot(parameters["n_neighbors"], y_values * -1)
     ymin = np.max(y_values)
-    plt.scatter(16, ymin * -1, color = 'red')
-    plt.xlabel('K')
-    plt.ylabel('MSE')
+    plt.scatter(16, ymin * -1, color="red")
+    plt.xlabel("K")
+    plt.ylabel("MSE")
     plt.show()
 
     best_parameters = grid_search.bestparams
@@ -249,5 +270,3 @@ def double_cross_validation(
         print(f"Tuned parameters: {best_parameters}")
 
     return best_parameters, performance_score, st_dev
-
-filtering_data_onehot('./LRDATA/LRDATA.csv', datetime(2019, 1, 1), datetime(2019, 12, 31), "EGLL")

@@ -51,3 +51,4 @@ def plot_errors(start_degree: int = 1, stop_degree: int = 2):
     plt.ylabel("MSE")
     plt.show()
 
+
