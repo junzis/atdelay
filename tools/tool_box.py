@@ -100,7 +100,7 @@ def get_data():
 
 
 def data_filter(P: pd.DataFrame, start: datetime, end: datetime, airport):
-    P = P.query("FiledOBT <= @end & FiledOBT >= @start & ArrivalDelay < 60 & ArrivalDelay > -30 & ADES != ADEP")
+    P = P.query("FiledOBT <= @end & FiledOBT >= @start & ArrivalDelay < 90 & ArrivalDelay > -30 & ADES != ADEP")
     if airport != None:
         P = P.query("ADES == @airport")
     
@@ -250,4 +250,4 @@ def double_cross_validation(
 
     return best_parameters, performance_score, st_dev
 
-filtering_data_onehot('./LRDATA/LRDATA.csv', datetime(2018, 1, 1), datetime(2019, 12, 1), None)
+filtering_data_onehot('./LRDATA/LRDATA.csv', datetime(2018, 1, 1), datetime(2019, 12, 1), "EGLL")
