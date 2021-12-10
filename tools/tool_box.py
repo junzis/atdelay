@@ -154,19 +154,22 @@ def parameter_search(
         model, parameters, cv=cv, n_jobs=-1, verbose=4, scoring=score_string,
     ).fit(X_train, y_train)
 
-    print("grid search", grid_search)
-    print("best params", grid_search.bestparams)
-    print("refit time", grid_search.refittime)
-    df = pd.DataFrame(grid_search.cvresults)
+    print("grid search = ", grid_search)
+    print("best params = ", grid_search.best_params_)
+    print("refit time = ", grid_search.refit_time_)
+    df = pd.DataFrame(grid_search.cv_results_)
     y_values = df.to_numpy()[:, -3]
-    plt.plot(parameters["n_neighbors"], y_values * -1)
     ymin = np.max(y_values)
-    plt.scatter(16, ymin * -1, color="red")
-    plt.xlabel("K")
-    plt.ylabel("MSE")
-    plt.show()
+    print("best score = ", ymin)
 
-    best_parameters = grid_search.bestparams
+    if model == KNeighborsRegressor():
+        plt.plot(parameters['n_neighbors'], y_values * -1)
+        plt.scatter(grid_search.best_params_['n_neighbors'], ymin * -1, color = 'red')
+        plt.xlabel('K')
+        plt.ylabel('MSE')
+        plt.show()
+
+    best_parameters = grid_search.best_params_
     return best_parameters
 
 
