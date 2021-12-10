@@ -145,7 +145,7 @@ def parameter_search(
     plt.ylabel('MSE')
     plt.show()
 
-    best_parameters = grid_search.bestparams
+    best_parameters = grid_search.best_params_
     return best_parameters
 
 
