@@ -45,9 +45,9 @@ def filtering_data_onehot(
     X_scaled_array = scaler.fit_transform(encoded_array)
     y = df["ArrivalDelay"].to_numpy()
 
-    pd.DataFrame((new_df3)).to_csv(
-        "tools/finaldf.csv", header=True, index=False
-    )
+    # pd.DataFrame((new_df3)).to_csv(
+    #     "tools/finaldf.csv", header=True, index=False
+    # )
 
     pd.DataFrame((X_scaled_array)).to_csv(
         "tools/xdata.csv", header=False, index=False
