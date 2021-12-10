@@ -11,6 +11,7 @@ from sklearn.neighbors import KNeighborsRegressor
 from sklearn.linear_model import LinearRegression
 import numpy as np
 from datetime import datetime
+import matplotlib.pyplot as plt
 
 import sys
 
@@ -32,21 +33,20 @@ def filtering_data_onehot(
     df = pd.read_csv(filename, header=0, index_col=0)
     df = df.assign(FiledOBT=lambda x: pd.to_datetime(x.FiledOBT, format=dform))
     df = data_filter(df, start, end)
-    new_df = df.drop(["FiledOBT", "FiledAT"], axis=1)
-    new_df2 = new_df.drop(["ArrivalDelay", "DepartureDelay"], axis=1)
+    new_df = df.drop(["FiledOBT", "FiledAT", "ACType", "ArrivalDelay", "DepartureDelay"], axis=1)
 
-    new_df3 = pd.get_dummies(new_df2, columns=new_df2.columns[:6])
+    new_df3 = pd.get_dummies(new_df, columns=new_df.columns[:5])
     encoded_array = new_df3.to_numpy()
     scaler = MinMaxScaler()
     X_scaled_array = scaler.fit_transform(encoded_array)
     y = df["ArrivalDelay"].to_numpy()
 
-    pd.DataFrame(X_scaled_array).to_csv(
-        "tools/scaled_encoded_data.csv", header=False, index=False
+    pd.DataFrame((new_df3)).to_csv(
+        "tools/finaldf.csv", header=True, index=False
     )
-    # pd.DataFrame(y).to_csv("y_2016_data.csv", header=False, index=False)
+
     pd.DataFrame((X_scaled_array)).to_csv(
-        "tools.xdata.csv", header=False, index=False
+        "tools/xdata.csv", header=False, index=False
     )
     pd.DataFrame((y)).to_csv("tools/ydata.csv", header=False, index=False)
 
@@ -243,3 +243,5 @@ def double_cross_validation(
         print(f"Tuned parameters: {best_parameters}")
 
     return best_parameters, performance_score, st_dev
+
+filtering_data_onehot('./LRDATA/LRDATA.csv', datetime(2019, 1, 1), datetime(2019, 4, 1))
