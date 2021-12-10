@@ -45,9 +45,9 @@ def filtering_data_onehot(
     X_scaled_array = scaler.fit_transform(encoded_array)
     y = df["ArrivalDelay"].to_numpy()
 
-    # pd.DataFrame((new_df3)).to_csv(
-    #     "tools/finaldf.csv", header=True, index=False
-    # )
+    pd.DataFrame((new_df3)).to_csv(
+        "tools/finaldf.csv", header=True, index=False
+    )
 
     pd.DataFrame((X_scaled_array)).to_csv(
         "tools/xdata.csv", header=False, index=False
@@ -250,4 +250,4 @@ def double_cross_validation(
 
     return best_parameters, performance_score, st_dev
 
-filtering_data_onehot('./LRDATA/LRDATA.csv', datetime(2018, 1, 1), datetime(2019, 12, 1), "EGLL")
+filtering_data_onehot('./LRDATA/LRDATA.csv', datetime(2019, 1, 1), datetime(2019, 12, 31), "EGLL")
