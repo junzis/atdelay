@@ -138,13 +138,15 @@ def parameter_search(
     print("refit time = ", grid_search.refit_time_)
     df = pd.DataFrame(grid_search.cv_results_)
     y_values = df.to_numpy()[:, -3]
-    plt.plot(parameters['n_neighbors'], y_values * -1)
     ymin = np.max(y_values)
     print("best score = ", ymin)
-    plt.scatter(grid_search.best_params_['n_neighbors'], ymin * -1, color = 'red')
-    plt.xlabel('K')
-    plt.ylabel('MSE')
-    plt.show()
+
+    if model == KNeighborsRegressor():
+        plt.plot(parameters['n_neighbors'], y_values * -1)
+        plt.scatter(grid_search.best_params_['n_neighbors'], ymin * -1, color = 'red')
+        plt.xlabel('K')
+        plt.ylabel('MSE')
+        plt.show()
 
     best_parameters = grid_search.best_params_
     return best_parameters
