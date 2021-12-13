@@ -27,7 +27,7 @@ def filtering_data_onehot(
     start: datetime = datetime(2015, 12, 31),
     end: datetime = datetime(2019, 12, 31),
     airport: str = None,
-    airport_capacity: int = 80,
+    airport_capacity: int = 88,
 ):
     df = pd.read_csv(filename, header=0, index_col=0)
 
@@ -35,24 +35,16 @@ def filtering_data_onehot(
     df = df.assign(FiledOBT=lambda x: pd.to_datetime(x.FiledOBT, format=dform)).assign(
         FiledAT=lambda x: pd.to_datetime(x.FiledAT, format=dform)
     )
-    df_2 = df = data_filter_outliers(df, start, end)
+    df_2 = data_filter_outliers(df, start, end)
     df_capacity = capacity_calc(df_2, airport, airport_capacity)
     if airport != None:
         df_capacity = df_capacity.query("ADES == @airport")
-    
     df_3 = dummies_encode(df_capacity, airport)
-    print(df_3.head())
-
-
     X_final = scaler(df_3)
-    y = df_2["ArrivalDelay"].to_numpy()
+    y = df_capacity["ArrivalDelay"].to_numpy()
 
-<<<<<<< Updated upstream
-    pd.DataFrame((df_3)).to_csv("tools/finaldf.csv", header=True, index=False)
+    pd.DataFrame((df_3)).to_csv("tools/finaldf.csv", header=False, index=False)
     pd.DataFrame((X_final)).to_csv("tools/xdata.csv", header=False, index=False)
-=======
-    pd.DataFrame((X_final)).to_csv("tools/xdata.csv", header=True, index=True)
->>>>>>> Stashed changes
     pd.DataFrame((y)).to_csv("tools/ydata.csv", header=False, index=False)
 
     return X_final, y
@@ -63,14 +55,18 @@ def dummies_encode(P: pd.DataFrame, airport):
         new_df = P.drop(
             ["FiledOBT", "FiledAT", "ACType", "ArrivalDelay", "DepartureDelay"], axis=1
         )
-        new_df3 = pd.get_dummies(new_df, columns=["ADEP", "ADES", "ACOperator", "month", "weekday"])
+        new_df3 = pd.get_dummies(
+            new_df, columns=["ADEP", "ADES", "ACOperator", "month", "weekday"]
+        )
 
     else:
         new_df = P.drop(
             ["ADES", "FiledOBT", "FiledAT", "ACType", "ArrivalDelay", "DepartureDelay"],
             axis=1,
         )
-        new_df3 = pd.get_dummies(new_df, columns=["ADEP", "ACOperator", "month", "weekday"])
+        new_df3 = pd.get_dummies(
+            new_df, columns=["ADEP", "ACOperator", "month", "weekday"]
+        )
 
     return new_df3
 
@@ -174,7 +170,7 @@ def capacity_calc(P: pd.DataFrame, airport: str = "EGLL", airport_capacity: int 
     cap_dict = K.to_dict()
 
     new_df["Time_tuple"] = list(zip(new_df.Date, new_df.Hour, new_df.Minutes))
-    new_df["capacity"] = new_df["Time_tuple"].map(cap_dict) / airport_capacity
+    new_df["capacity"] = new_df["Time_tuple"].map(cap_dict) / airport_capacity / 4
     new_df = new_df.drop(["Time_tuple", "Date", "Hour", "Minutes", "Time"], axis=1)
     new_df = new_df.sort_values("FiledAT")
 
@@ -223,7 +219,7 @@ def parameter_search(
         plt.ylabel("MSE")
         plt.show()
 
-    filedOBT = pd.read_csv("./tools/finaldf.csv", header= 0).to_numpy()[:, 1]
+    filedOBT = pd.read_csv("./tools/finaldf.csv", header=0).to_numpy()[:, 1]
     prediction = grid_search.predict(X_train)
 
     best_parameters = grid_search.best_params_
@@ -331,15 +327,3 @@ def double_cross_validation(
 
     return best_parameters, performance_score, st_dev
 
-
-<<<<<<< Updated upstream
-# filtering_data_onehot('./LRData/LRDATA.csv', datetime(2019, 3, 1), datetime(2019, 3, 2), 'EGLL')
-=======
-X, y = filtering_data_onehot(
-    "LRData/LRDATA.csv",
-    datetime(2019, 3, 1),
-    datetime(2019, 3, 31),
-    airport="EGLL",
-    airport_capacity=88,
-)
->>>>>>> Stashed changes
