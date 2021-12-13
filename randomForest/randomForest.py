@@ -1,4 +1,4 @@
-from sklearn.metrics import mean_squared_error
+from sklearn.metrics import mean_absolute_error
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import GridSearchCV
 from sklearn.model_selection import KFold
@@ -16,9 +16,8 @@ X_train, X_test, y_train, y_test = train_test_split(
     X, y, test_size=0.2, shuffle=True, random_state=42
 )
 
-
 def parameter_search():
-    parameters = {"n_estimators": [150]}
+    parameters = {"n_estimators": [500], "max_features": ["auto"], "max_depth": [120], "min_samples_split": [10], "min_samples_leaf": [2], "bootstrap": [True]}
 
     regr = RandomForestRegressor(n_jobs=-1)
 
@@ -30,5 +29,12 @@ def parameter_search():
     return grid_search.cv_results_
 
 
-result = parameter_search()
-print(result)
+# result = parameter_search()
+# print(result)
+
+forest = RandomForestRegressor(n_estimators=500, max_features="auto", max_depth=120, min_samples_split=10, min_samples_leaf=2, bootstrap=True, n_jobs=-1)
+forest.fit(X_train, y_train)
+prediction = forest.predict(X_test)
+score = mean_absolute_error(y_test, prediction)
+
+print(score)
