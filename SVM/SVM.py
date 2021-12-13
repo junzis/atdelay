@@ -45,22 +45,25 @@ print('average y = ', np.average(Y))
 print("finding parameters for KNN...")
 
 predictions = {}
-best_parameters, prediction = parameter_search(models["KNearestNeighbor"], model_parameters["KNearestNeighbor"], X, Y, 'neg_mean_absolute_error')
+filtering_data_onehot('./LRData/LRDATA.csv', datetime(2019, 3, 1), datetime(2019, 3, 2), 'EGLL')
+best_parameters, prediction = parameter_search(models["SVM"], model_parameters["SVM"], X, Y, 'neg_mean_absolute_error')
 predictions['day real'] = Y
 predictions['day prdct'] = prediction
 predictions['day error'] = prediction - Y
 
-
+predictions_month = {}
 filtering_data_onehot('./LRData/LRDATA.csv', datetime(2019, 3, 1), datetime(2019, 3, 31), 'EGLL')
 X = pd.read_csv("./tools/xdata.csv", header= None).to_numpy()
 Y = pd.read_csv("./tools/ydata.csv", header= None).to_numpy()
 Y = Y.reshape((-1,))
-best_parameters, prediction = parameter_search(models["KNearestNeighbor"], model_parameters["KNearestNeighbor"], X, Y, 'neg_mean_absolute_error')
-predictions['month real'] = Y
-predictions['month prdct'] = prediction
-predictions['month error'] = prediction - Y
+best_parameters, prediction = parameter_search(models["SVM"], model_parameters["SVM"], X, Y, 'neg_mean_absolute_error')
+predictions_month['month real'] = Y
+predictions_month['month prdct'] = prediction
+predictions_month['month error'] = prediction - Y
 
-fig, ax = plt.subplots()
-ax.boxplot(predictions.values())
-ax.set_xticklabels(predictions.keys())
+predictions_df = pd.DataFrame.from_dict(predictions)
+predictions_month_df = pd.DataFrame.from_dict(predictions_month)
+
+sns.set(style='darkgrid')
+sns.jointplot(x = 'month real', y = 'month prdct', data = predictions_month_df, kind='kde', xlim= [-30, 90], ylim= [-30, 90], fill=True)
 plt.show()
