@@ -34,7 +34,8 @@ def filtering_data_onehot(
     X_final = scaler(df_3)
     y = df_2["ArrivalDelay"].to_numpy()
 
-    pd.DataFrame((X_scaled_array)).to_csv("tools/xdata.csv", header=False, index=False)
+    pd.DataFrame((df_3)).to_csv("tools/finaldf.csv", header=True, index=False)
+    pd.DataFrame((X_final)).to_csv("tools/xdata.csv", header=False, index=False)
     pd.DataFrame((y)).to_csv("tools/ydata.csv", header=False, index=False)
     return X_final
 
@@ -169,8 +170,11 @@ def parameter_search(
         plt.ylabel('MSE')
         plt.show()
 
+    filedOBT = pd.read_csv("./tools/finaldf.csv", header= 0).to_numpy()[:, 1]
+    prediction = grid_search.predict(X_train)
+
     best_parameters = grid_search.best_params_
-    return best_parameters
+    return best_parameters, prediction
 
 
 def split_into_folds(X: np.array, y: np.array, n_folds: int):
@@ -273,3 +277,6 @@ def double_cross_validation(
         print(f"Tuned parameters: {best_parameters}")
 
     return best_parameters, performance_score, st_dev
+
+
+filtering_data_onehot('./LRData/LRDATA.csv', datetime(2019, 3, 1), datetime(2019, 3, 2), 'EGLL')
