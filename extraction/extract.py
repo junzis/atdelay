@@ -190,8 +190,8 @@ def readLRDATA(saveFolder: str = "LRData", fileName: str = "LRDATA.csv"):
 
 
 if __name__ == "__main__":
-    start = datetime(2019, 3, 1)
-    end = datetime(2019, 3, 1)
+    start = datetime(2015, 1, 1)
+    end = datetime(2019, 12, 31)
     airports = ICAOTOP50
     print(f"Generating for {len(airports)} Airports")
 

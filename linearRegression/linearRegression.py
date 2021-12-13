@@ -1,5 +1,5 @@
 from sklearn.linear_model import LinearRegression
-from sklearn.metrics import mean_squared_error, neg_mean_absolute_error
+from sklearn.metrics import mean_squared_error, mean_absolute_error
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.pipeline import make_pipeline
 from sklearn.model_selection import GridSearchCV
@@ -50,5 +50,4 @@ def plot_errors(start_degree: int = 1, stop_degree: int = 2):
     plt.xlabel("Polynomial degree")
     plt.ylabel("MSE")
     plt.show()
-
 

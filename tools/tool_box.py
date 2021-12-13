@@ -25,19 +25,37 @@ import sys
 def filtering_data_onehot(
     filename: str,
     start: datetime = datetime(2015, 12, 31),
-    end: datetime = datetime(2015, 12, 31),
+    end: datetime = datetime(2019, 12, 31),
     airport: str = None,
+    airport_capacity: int = 80,
 ):
     df = pd.read_csv(filename, header=0, index_col=0)
-    df_2 = data_filter(df, start, end, airport)
-    df_3 = dummies_encode(df_2, airport)
+
+    dform = "%Y-%m-%d %H:%M:%S"
+    df = df.assign(FiledOBT=lambda x: pd.to_datetime(x.FiledOBT, format=dform)).assign(
+        FiledAT=lambda x: pd.to_datetime(x.FiledAT, format=dform)
+    )
+    df_2 = df = data_filter_outliers(df, start, end)
+    df_capacity = capacity_calc(df_2, airport, airport_capacity)
+    if airport != None:
+        df_capacity = df_capacity.query("ADES == @airport")
+    
+    df_3 = dummies_encode(df_capacity, airport)
+    print(df_3.head())
+
+
     X_final = scaler(df_3)
     y = df_2["ArrivalDelay"].to_numpy()
 
+<<<<<<< Updated upstream
     pd.DataFrame((df_3)).to_csv("tools/finaldf.csv", header=True, index=False)
     pd.DataFrame((X_final)).to_csv("tools/xdata.csv", header=False, index=False)
+=======
+    pd.DataFrame((X_final)).to_csv("tools/xdata.csv", header=True, index=True)
+>>>>>>> Stashed changes
     pd.DataFrame((y)).to_csv("tools/ydata.csv", header=False, index=False)
-    return X_final
+
+    return X_final, y
 
 
 def dummies_encode(P: pd.DataFrame, airport):
@@ -45,14 +63,14 @@ def dummies_encode(P: pd.DataFrame, airport):
         new_df = P.drop(
             ["FiledOBT", "FiledAT", "ACType", "ArrivalDelay", "DepartureDelay"], axis=1
         )
-        new_df3 = pd.get_dummies(new_df, columns=new_df.columns[:5])
+        new_df3 = pd.get_dummies(new_df, columns=["ADEP", "ADES", "ACOperator", "month", "weekday"])
 
     else:
         new_df = P.drop(
             ["ADES", "FiledOBT", "FiledAT", "ACType", "ArrivalDelay", "DepartureDelay"],
             axis=1,
         )
-        new_df3 = pd.get_dummies(new_df, columns=new_df.columns[:4])
+        new_df3 = pd.get_dummies(new_df, columns=["ADEP", "ACOperator", "month", "weekday"])
 
     return new_df3
 
@@ -74,7 +92,8 @@ def filtering_data_ordinal_enc(
 
     df = pd.read_csv(filename, header=0, index_col=0)
     df = df.assign(FiledOBT=lambda x: pd.to_datetime(x.FiledOBT, format=dform))
-    df = data_filter(df, start, end)
+    df = data_filter_outliers(df, start, end,)
+
     new_df = df.drop(["FiledOBT", "FiledAT"], axis=1)
     new_df2 = new_df.drop(["ArrivalDelay", "DepartureDelay"], axis=1)
 
@@ -107,15 +126,12 @@ def get_data():
     return X, y
 
 
-def data_filter(P: pd.DataFrame, start: datetime, end: datetime, airport: str):
-    dform = "%Y-%m-%d %H:%M:%S"
-    P = P.assign(FiledOBT=lambda x: pd.to_datetime(x.FiledOBT, format=dform)).query(
+def data_filter_outliers(P: pd.DataFrame, start: datetime, end: datetime):
+    P = P.query(
         "FiledOBT <= @end & FiledOBT >= @start & ArrivalDelay < 90 & ArrivalDelay > -30 & ADES != ADEP"
     )
-    if airport != None:
-        P = P.query("ADES == @airport")
-
     return P
+
 
 def data_filter_ADEPADES(P: pd.DataFrame, start: datetime, end: datetime, airport: str):
     dform = "%Y-%m-%d %H:%M:%S"
@@ -124,8 +140,45 @@ def data_filter_ADEPADES(P: pd.DataFrame, start: datetime, end: datetime, airpor
     )
     if airport != None:
         P = P.query("ADES == @airport |ADEP == @airport ")
-    
+
     return P
+
+
+def capacity_calc(P: pd.DataFrame, airport: str = "EGLL", airport_capacity: int = 80):
+    # times = pd.DatetimeIndex(P.time)
+    dform = "%Y-%m-%d %H:%M:%S"
+    P = P.assign(FiledOBT=lambda x: pd.to_datetime(x.FiledOBT, format=dform))
+
+    dep = P.query("ADEP == @airport")
+    des = P.query("ADES == @airport")
+    dep = dep.assign(Date=lambda x: x.FiledOBT.dt.date)
+    des = des.assign(Date=lambda x: x.FiledAT.dt.date)
+
+    dep = (
+        dep.assign(Hour=lambda x: x.FiledOBT.dt.hour)
+        .assign(Minutes=lambda x: x.FiledOBT.dt.minute // 15 * 15)
+        .assign(Time=lambda x: x.FiledOBT)
+    )
+    des = (
+        des.assign(Hour=lambda x: x.FiledAT.dt.hour)
+        .assign(Minutes=lambda x: x.FiledAT.dt.minute // 15 * 15)
+        .assign(Time=lambda x: x.FiledAT)
+    )
+
+    new_df = pd.concat([dep, des], axis=0)
+    new_df.Time = new_df.Time.apply(
+        lambda x: pd.datetime(x.year, x.month, x.day, x.hour, x.minute // 15 * 15, 0)
+    )
+    times = pd.DatetimeIndex(new_df.Time)
+    K = new_df.groupby([times.date, times.hour, times.minute])["ADES"].count()
+    cap_dict = K.to_dict()
+
+    new_df["Time_tuple"] = list(zip(new_df.Date, new_df.Hour, new_df.Minutes))
+    new_df["capacity"] = new_df["Time_tuple"].map(cap_dict) / airport_capacity
+    new_df = new_df.drop(["Time_tuple", "Date", "Hour", "Minutes", "Time"], axis=1)
+    new_df = new_df.sort_values("FiledAT")
+
+    return new_df
 
 
 def parameter_search(
@@ -164,10 +217,10 @@ def parameter_search(
     print("best score = ", ymin)
 
     if model == KNeighborsRegressor():
-        plt.plot(parameters['n_neighbors'], y_values * -1)
-        plt.scatter(grid_search.best_params_['n_neighbors'], ymin * -1, color = 'red')
-        plt.xlabel('K')
-        plt.ylabel('MSE')
+        plt.plot(parameters["n_neighbors"], y_values * -1)
+        plt.scatter(grid_search.best_params_["n_neighbors"], ymin * -1, color="red")
+        plt.xlabel("K")
+        plt.ylabel("MSE")
         plt.show()
 
     filedOBT = pd.read_csv("./tools/finaldf.csv", header= 0).to_numpy()[:, 1]
@@ -279,4 +332,14 @@ def double_cross_validation(
     return best_parameters, performance_score, st_dev
 
 
+<<<<<<< Updated upstream
 # filtering_data_onehot('./LRData/LRDATA.csv', datetime(2019, 3, 1), datetime(2019, 3, 2), 'EGLL')
+=======
+X, y = filtering_data_onehot(
+    "LRData/LRDATA.csv",
+    datetime(2019, 3, 1),
+    datetime(2019, 3, 31),
+    airport="EGLL",
+    airport_capacity=88,
+)
+>>>>>>> Stashed changes
