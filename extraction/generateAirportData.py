@@ -31,10 +31,12 @@ d = (
     a.groupby(['ADEP','ADES'], as_index=False)
     .agg({'ADEP': ['count', 'first'], "ADES":"first", "ADEPLat": "first", "ADEPLong": "first", "ADESLat": "first", "ADESLong": "first"})  
 )
-d.columns = ["count", "ADEP", "ADES", "ADESLong", "ADEPLong", "ADESLat", "ADEPLat"]
-d = d.query("ADEP != ADES")
+d.columns = ["count", "ADEP", "ADES", "ADEPLat", "ADEPLong", "ADESLat", "ADEPLong"]
+# d = d.query("ADEP != ADES")
+print(d.query("ADEP == ADES"))
+hello = (a.query("ADEP == ADES"))
 # d.columns.droplevel(0)
-print(d.columns)
-saveToCSV(d, "airportcombinations", "filteredData")
+# print(d.columns)
+saveToCSV(hello, "duplicateFlights", "filteredData")
 print(len(d))
 print(d)
