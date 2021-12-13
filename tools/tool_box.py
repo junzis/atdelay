@@ -279,4 +279,4 @@ def double_cross_validation(
     return best_parameters, performance_score, st_dev
 
 
-filtering_data_onehot('./LRData/LRDATA.csv', datetime(2019, 3, 1), datetime(2019, 3, 2), 'EGLL')
+# filtering_data_onehot('./LRData/LRDATA.csv', datetime(2019, 3, 1), datetime(2019, 3, 2), 'EGLL')
