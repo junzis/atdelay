@@ -55,7 +55,7 @@ def filtering_data_onehot(
 def dummies_encode(P: pd.DataFrame, airport):
     if airport == None:
         new_df = P.drop(
-            ["FiledOBT", "FiledAT", "ACType", "ArrivalDelay", "DepartureDelay"], axis=1
+            ["FiledOBT", "FiledAT", "ACType", "ArrivalDelay"], axis=1
         )
         new_df3 = pd.get_dummies(
             new_df, columns=["ADEP", "ADES", "ACOperator", "month", "weekday"]
@@ -63,7 +63,7 @@ def dummies_encode(P: pd.DataFrame, airport):
 
     else:
         new_df = P.drop(
-            ["ADES", "FiledOBT", "FiledAT", "ACType", "ArrivalDelay", "DepartureDelay"],
+            ["ADES", "FiledOBT", "FiledAT", "ACType", "ArrivalDelay"],
             axis=1,
         )
         new_df3 = pd.get_dummies(
