@@ -242,7 +242,7 @@ def generateNNdata(airport, numRunways=6, numGates=98):
         .assign(gates=lambda x: numGates)
         .assign(planes=lambda x: x.arriving - x.departing)
         .assign(weekend=lambda x: x.index.weekday >= 5)
-        .assign(winter=lambda x: (x.index.month > 11) & (x.index.month < 3))
+        .assign(winter=lambda x: (x.index.month > 11) | (x.index.month < 3))
         .assign(spring=lambda x: (x.index.month > 2) & (x.index.month < 6))
         .assign(summer=lambda x: (x.index.month > 5) & (x.index.month < 9))
         .assign(autumn=lambda x: (x.index.month > 8) & (x.index.month < 12))
@@ -260,7 +260,7 @@ def generateNNdata(airport, numRunways=6, numGates=98):
     # arrivals.autumn = arrivals.autumn.astype(int)
     # print(arrivals)
     arrivals.reset_index(inplace=True)
-    return arrivals.rename(columns={"FiledAT":"timeslot"}), Y
+    return arrivals.rename(columns={"FiledAT": "timeslot"}), Y
 
 
 def show_heatmap(data):
@@ -283,9 +283,13 @@ date_time_key = "timeslot"
 
 def show_raw_visualization(data):
     time_data = data[date_time_key]
-    feature_keys=data.columns
+    feature_keys = data.columns
     fig, axes = plt.subplots(
-        nrows=(len(feature_keys)+1)//2, ncols=2, figsize=(20, 15), dpi=70
+        nrows=(len(feature_keys) + 1) // 2,
+        ncols=2,
+        figsize=(20, 15),
+        dpi=70,
+        sharex=True,
     )
     for i in range(len(feature_keys)):
         key = feature_keys[i]
@@ -293,16 +297,10 @@ def show_raw_visualization(data):
         t_data = data[key]
         t_data.index = time_data
         t_data.head()
-        ax = t_data.plot(
-            ax=axes[i // 2, i % 2],
-            color=c,
-            title=key,
-            rot=25,
-        )
+        ax = t_data.plot(ax=axes[i // 2, i % 2], color=c, title=key, rot=25,)
         # ax.legend(key)
+        ax.grid()
     plt.tight_layout()
-
-
 
 
 if __name__ == "__main__":
@@ -323,7 +321,7 @@ if __name__ == "__main__":
     X["arriving"] = min_max_scaling(X["arriving"])
     X["DepartureDelay"] = min_max_scaling(X["DepartureDelay"])
     X["lowcost"] = min_max_scaling(X["lowcost"])
-    
+
     print(X)
     show_heatmap(X)
     show_raw_visualization(X)
