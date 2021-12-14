@@ -147,6 +147,11 @@ def linearRegressionFormat(P: pd.DataFrame, airports: list = ICAOTOP50):
         "ACOperator",
         "ArrivalDelay",
         "DepartureDelay",
+        "ADEPLat",
+        "ADEPLong",
+        "ADESLat",
+        "ADESLong"
+
     ]
     P = filterAirports(P, airports)
     P = calculateDelays(P)
