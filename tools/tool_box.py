@@ -331,5 +331,6 @@ def double_cross_validation(
 
 def plot(df: pd.DataFrame, x_name : str, y_name :str):
     sns.set(style='darkgrid')
-    sns.jointplot(x = x_name, y = y_name, data = df, kind='kde', xlim= [-30, 90], ylim= [-30, 90], fill=True)
+    g = sns.jointplot(x = x_name, y = y_name, data = df, kind='kde', xlim= [-30, 90], ylim= [-30, 90], fill=True)
+    sns.regplot(x = x_name, y = y_name, data = df, scatter=False, ax=g.ax_joint)
     plt.show()
