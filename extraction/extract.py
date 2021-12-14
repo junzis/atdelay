@@ -259,7 +259,8 @@ def generateNNdata(airport, numRunways=6, numGates=98):
     # arrivals.summer = arrivals.summer.astype(int)
     # arrivals.autumn = arrivals.autumn.astype(int)
     # print(arrivals)
-    return arrivals, Y
+    arrivals.reset_index(inplace=True)
+    return arrivals.rename(columns={"FiledAT":"timeslot"}), Y
 
 
 def show_heatmap(data):
@@ -271,11 +272,37 @@ def show_heatmap(data):
     cb = plt.colorbar()
     cb.ax.tick_params(labelsize=14)
     plt.title("Feature Correlation Heatmap", fontsize=14)
-    plt.show()
 
 
 def min_max_scaling(series):
     return (series - series.min()) / (series.max() - series.min())
+
+
+date_time_key = "timeslot"
+
+
+def show_raw_visualization(data):
+    time_data = data[date_time_key]
+    feature_keys=data.columns
+    fig, axes = plt.subplots(
+        nrows=(len(feature_keys)+1)//2, ncols=2, figsize=(20, 15), dpi=70
+    )
+    for i in range(len(feature_keys)):
+        key = feature_keys[i]
+        c = plotcolors[i % (len(plotcolors))]
+        t_data = data[key]
+        t_data.index = time_data
+        t_data.head()
+        ax = t_data.plot(
+            ax=axes[i // 2, i % 2],
+            color=c,
+            title=key,
+            rot=25,
+        )
+        # ax.legend(key)
+    plt.tight_layout()
+
+
 
 
 if __name__ == "__main__":
@@ -296,6 +323,8 @@ if __name__ == "__main__":
     X["arriving"] = min_max_scaling(X["arriving"])
     X["DepartureDelay"] = min_max_scaling(X["DepartureDelay"])
     X["lowcost"] = min_max_scaling(X["lowcost"])
-
+    
     print(X)
     show_heatmap(X)
+    show_raw_visualization(X)
+    plt.show()
