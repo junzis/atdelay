@@ -189,42 +189,93 @@ def readLRDATA(saveFolder: str = "LRData", fileName: str = "LRDATA.csv"):
     P = pd.read_csv(fullfilename, header=0, index_col=0)
     return P
 
-  
+
 def generalFilterAirport(start, end, airport):
     file = f"filteredData/general{airport}.csv"
     dform = "%Y-%m-%d %H:%M:%S"
     if os.path.exists(file):
         P = pd.read_csv(file, header=0, index_col=0)
-        P = (P.assign(FiledOBT=lambda x: pd.to_datetime(x.FiledOBT, format=dform))
+        P = (
+            P.assign(FiledOBT=lambda x: pd.to_datetime(x.FiledOBT, format=dform))
             .assign(FiledAT=lambda x: pd.to_datetime(x.FiledAT, format=dform))
             .assign(ActualOBT=lambda x: pd.to_datetime(x.ActualOBT, format=dform))
-            .assign(ActualAT=lambda x: pd.to_datetime(x.ActualAT, format=dform)))
+            .assign(ActualAT=lambda x: pd.to_datetime(x.ActualAT, format=dform))
+        )
     else:
         P = extractData(start, end)
         P = P.query("`ADES` == @airport | `ADEP` == @airport")
         P = calculateDelays(P)
         P.to_csv(file)
 
-
     return P
 
 
-def generateNNdata(airport):
-    start = datetime(2019, 1, 1)
+def generateNNdata(airport, numRunways=6, numGates=98):
+    start = datetime(2018, 1, 1)
     end = datetime(2019, 12, 31)
     P = generalFilterAirport(start, end, airport)
     # P = P.query("`ADES`==@airport")
-    print(P.head())
-    minss = 20
-    agg_10m = P.groupby(pd.Grouper(key="FiledAT", freq=f'{minss}min')).agg({'ADES' : "count"})
-    agg_10m2 = P.groupby(pd.Grouper(key="FiledOBT", freq=f'{minss}min')).agg({'ADEP' : "count"})
-    # agg_10m = P["ADES"].groupby(pd.Grouper(freq='10min')).agg({'ADES' : "count"})
-    print(agg_10m)
-    plt.plot(agg_10m.iloc[2000:int(2000 + 3*(1440/minss))], label = "arrivals")
-    plt.plot(agg_10m2.iloc[2000:int(2000 + 3*(1440/minss))], label = "departures")
-    plt.legend()
+    # print(P.head())
+    P["arriving"] = P.ADES == airport
+    P["departing"] = P.ADEP == airport
+    P["lowcost"] = P.FlightType != "Traditional Scheduled"
+    minss = 5
+    plotdays = 0.5
+    arrivals = (
+        P.groupby(
+            [
+                pd.Grouper(key="FiledAT", freq=f"{minss}min"),
+                # "arriving",
+            ]
+        )
+        .agg(
+            {
+                "departing": "sum",
+                "arriving": "sum",
+                # "ADES": "count",
+                "DepartureDelay": "mean",
+                "ArrivalDelay": "mean",
+                "lowcost": "mean",
+            }
+        )
+        .assign(runways=lambda x: numRunways)
+        .assign(gates=lambda x: numGates)
+        .assign(planes=lambda x: x.arriving - x.departing)
+        .assign(weekend=lambda x: x.index.weekday >= 5)
+        .assign(winter=lambda x: (x.index.month > 11) & (x.index.month < 3))
+        .assign(spring=lambda x: (x.index.month > 2) & (x.index.month < 6))
+        .assign(summer=lambda x: (x.index.month > 5) & (x.index.month < 9))
+        .assign(autumn=lambda x: (x.index.month > 8) & (x.index.month < 12))
+        .fillna(0)
+    )
+
+    Y = arrivals.ArrivalDelay
+    arrivals = arrivals.drop("ArrivalDelay", axis=1)
+    arrivals = arrivals.drop(["runways", "gates"], axis=1)
+    arrivals = arrivals * 1
+    # arrivals.weekend = arrivals.weekend.astype(int)
+    # arrivals.winter = arrivals.winter.astype(int)
+    # arrivals.spring = arrivals.spring.astype(int)
+    # arrivals.summer = arrivals.summer.astype(int)
+    # arrivals.autumn = arrivals.autumn.astype(int)
+    # print(arrivals)
+    return arrivals, Y
+
+
+def show_heatmap(data):
+    plt.matshow(data.corr())
+    plt.xticks(range(data.shape[1]), data.columns, fontsize=14, rotation=90)
+    plt.gca().xaxis.tick_bottom()
+    plt.yticks(range(data.shape[1]), data.columns, fontsize=14)
+
+    cb = plt.colorbar()
+    cb.ax.tick_params(labelsize=14)
+    plt.title("Feature Correlation Heatmap", fontsize=14)
     plt.show()
-    return agg_10m
+
+
+def min_max_scaling(series):
+    return (series - series.min()) / (series.max() - series.min())
 
 
 if __name__ == "__main__":
@@ -239,4 +290,12 @@ if __name__ == "__main__":
     # print(readLRDATA().head(50))
     # print(len(a))
 
-    generateNNdata("EHAM")
+    X, Y = generateNNdata("EHAM")
+
+    X["departing"] = min_max_scaling(X["departing"])
+    X["arriving"] = min_max_scaling(X["arriving"])
+    X["DepartureDelay"] = min_max_scaling(X["DepartureDelay"])
+    X["lowcost"] = min_max_scaling(X["lowcost"])
+
+    print(X)
+    show_heatmap(X)
