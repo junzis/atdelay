@@ -204,7 +204,7 @@ def haversine(P: pd.DataFrame):
 
 def time_distance(P: pd.DataFrame):
     P['distance'] = P.apply(lambda row: haversine(row), axis=1)
-    P['flight_time'] = P.apply(lambda row: row['FiledAT'] - row['FiledOBT'], axis=1)
+    P['flight_time'] = P.apply(lambda row: (row['FiledAT'] - row['FiledOBT']).seconds / 60, axis=1)
     P = P.drop(['ADEPLong', 'ADEPLat', 'ADESLong', 'ADESLat'], axis=1)
 
     return P
