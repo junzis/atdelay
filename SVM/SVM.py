@@ -15,6 +15,8 @@ sys.path.append(".")
 # from tools.tool_box import double_cross_validation
 from tools.tool_box import parameter_search
 from tools.tool_box import filtering_data_onehot
+from tools.tool_box import plot
+
 
 print('creating models...')
 models = {
@@ -63,3 +65,5 @@ predictions_month['month error'] = prediction - Y
 
 predictions_df = pd.DataFrame.from_dict(predictions)
 predictions_month_df = pd.DataFrame.from_dict(predictions_month)
+
+plot(predictions_month_df, 'month real', 'month prdct')
