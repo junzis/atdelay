@@ -14,12 +14,12 @@ from tools.tool_box import parameter_search, get_data, plot
 
 def grid_search_forest():
     parameters = {
-        "n_estimators": [300],
-        "max_features": ["auto"],
-        "max_depth": [50],
-        "min_samples_split": [10],
-        "min_samples_leaf": [2],
-        "bootstrap": [True],
+        "n_estimators": [100, 300, 600],
+        "max_features": [None, "log2", "auto"],
+        "max_depth": [50, 250, 500],
+        "min_samples_split": [2, 5, 10, 20, 50, 100, 1000],
+        "min_samples_leaf": [1, 2, 5, 10, 20, 50, 100, 1000],
+        "bootstrap": [True, False],
     }
 
     regr = RandomForestRegressor(n_jobs=-1)
