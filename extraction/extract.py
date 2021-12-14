@@ -148,7 +148,7 @@ def linearRegressionFormat(P: pd.DataFrame, airports: list = ICAOTOP50):
         "ArrivalDelay",
         "DepartureDelay",
     ]
-    P = filterAirports(P, airports)
+    # P = filterAirports(P, airports)
     P = calculateDelays(P)
     P = P.loc[:, columns]
     P["month"] = P["FiledAT"].dt.month
@@ -190,8 +190,13 @@ def readCSV(saveFolder: str = "LRData", fileName: str = "LRDATA.csv"):
     Returns:
         pd.Dataframe: flights dataframe in linear regression format
     """
+    dform = "%d-%m-%Y %H:%M:%S"
     fullfilename = f"{saveFolder}/{fileName}"
     P = pd.read_csv(fullfilename, header=0, index_col=0)
+    # P = (P.assign(FiledOBT=lambda x: pd.to_datetime(x.FiledOBT, format=dform))
+    #         .assign(FiledAT=lambda x: pd.to_datetime(x.FiledAT, format=dform))
+    #         .assign(ActualOBT=lambda x: pd.to_datetime(x.ActualOBT, format=dform))
+    #         .assign(ActualAT=lambda x: pd.to_datetime(x.ActualAT, format=dform)))
     return P
 
 
@@ -202,7 +207,10 @@ if __name__ == "__main__":
     print(f"Generating for {len(airports)} Airports")
 
     a = extractData(start, end)
+    # a = filterAirports(a, airports)
+    a = calculateDelays(a)
+    a = a.query("`ADEP` == 'EHAM' | `ADES` == 'EHAM'")
     # a = linearRegressionFormat(a, airports)
-    a = generalFilter(a, airports)
-    saveToCSV(a, "general", "filteredData")
+    # a = generalFilter(a, ["EHAM"])
+    saveToCSV(a, "generalEHAM", "filteredData")
 
