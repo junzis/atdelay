@@ -27,7 +27,7 @@ models = {
 
 model_parameters = {
     "KNearestNeighbor": {
-        'n_neighbors' : range(1, 100, 10), 'weights' : ["uniform"]
+        'n_neighbors' : range(1, 70, 2), 'weights' : ["uniform"]
     },
     "SVM": {
         'C' : [0.1, 1, 10, 100, 1000], 'kernel' : ['linear', 'poly', 'rbf', 'sigmoid']
@@ -37,31 +37,32 @@ model_parameters = {
 
 dform = "%Y-%m-%d %H:%M:%S"
 
+
+# print("finding parameters for SVM")
+# print(parameter_search(models["SVM"], model_parameters["SVM"], X, Y))
+# print("finding parameters for KNN...")
+
+predictions = {}
+filtering_data_onehot('./LRData/LRDATA.csv', datetime(2019, 3, 1), datetime(2019, 3, 2), 'EGLL')
 print("reading data...")
 X = pd.read_csv("./tools/xdata.csv", header= None).to_numpy()
 Y = pd.read_csv("./tools/ydata.csv", header= None).to_numpy()
 Y = Y.reshape((-1,))
 print('average y = ', np.average(Y))
-# print("finding parameters for SVM")
-# print(parameter_search(models["SVM"], model_parameters["SVM"], X, Y))
-print("finding parameters for KNN...")
-
-predictions = {}
-filtering_data_onehot('./LRData/LRDATA.csv', datetime(2019, 3, 1), datetime(2019, 3, 2), 'EGLL')
-best_parameters, prediction = parameter_search(models["SVM"], model_parameters["SVM"], X, Y, 'neg_mean_absolute_error')
-predictions['day real'] = Y
+best_parameters, prediction, y_test_day = parameter_search(models["KNearestNeighbor"], model_parameters["KNearestNeighbor"], X, Y, 'neg_mean_squared_error')
+predictions['day real'] = y_test_day
 predictions['day prdct'] = prediction
-predictions['day error'] = prediction - Y
+predictions['day error'] = prediction - y_test_day
 
 predictions_month = {}
 filtering_data_onehot('./LRData/LRDATA.csv', datetime(2019, 3, 1), datetime(2019, 3, 31), 'EGLL')
 X = pd.read_csv("./tools/xdata.csv", header= None).to_numpy()
 Y = pd.read_csv("./tools/ydata.csv", header= None).to_numpy()
 Y = Y.reshape((-1,))
-best_parameters, prediction = parameter_search(models["SVM"], model_parameters["SVM"], X, Y, 'neg_mean_absolute_error')
-predictions_month['month real'] = Y
+best_parameters, prediction, y_test_month = parameter_search(models["KNearestNeighbor"], model_parameters["KNearestNeighbor"], X, Y, 'neg_mean_squared_error')
+predictions_month['month real'] = y_test_month
 predictions_month['month prdct'] = prediction
-predictions_month['month error'] = prediction - Y
+predictions_month['month error'] = prediction - y_test_month
 
 predictions_df = pd.DataFrame.from_dict(predictions)
 predictions_month_df = pd.DataFrame.from_dict(predictions_month)
