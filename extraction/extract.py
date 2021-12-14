@@ -6,6 +6,7 @@ from datetime import datetime
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 from extractionvalues import *
+import numpy as np
 
 
 def extractData(
@@ -189,15 +190,53 @@ def readLRDATA(saveFolder: str = "LRData", fileName: str = "LRDATA.csv"):
     return P
 
   
+def generalFilterAirport(start, end, airport):
+    file = f"filteredData/general{airport}.csv"
+    dform = "%Y-%m-%d %H:%M:%S"
+    if os.path.exists(file):
+        P = pd.read_csv(file, header=0, index_col=0)
+        P = (P.assign(FiledOBT=lambda x: pd.to_datetime(x.FiledOBT, format=dform))
+            .assign(FiledAT=lambda x: pd.to_datetime(x.FiledAT, format=dform))
+            .assign(ActualOBT=lambda x: pd.to_datetime(x.ActualOBT, format=dform))
+            .assign(ActualAT=lambda x: pd.to_datetime(x.ActualAT, format=dform)))
+    else:
+        P = extractData(start, end)
+        P = P.query("`ADES` == @airport | `ADEP` == @airport")
+        P = calculateDelays(P)
+        P.to_csv(file)
+
+
+    return P
+
+
+def generateNNdata(airport):
+    start = datetime(2019, 1, 1)
+    end = datetime(2019, 12, 31)
+    P = generalFilterAirport(start, end, airport)
+    # P = P.query("`ADES`==@airport")
+    print(P.head())
+    minss = 20
+    agg_10m = P.groupby(pd.Grouper(key="FiledAT", freq=f'{minss}min')).agg({'ADES' : "count"})
+    agg_10m2 = P.groupby(pd.Grouper(key="FiledOBT", freq=f'{minss}min')).agg({'ADEP' : "count"})
+    # agg_10m = P["ADES"].groupby(pd.Grouper(freq='10min')).agg({'ADES' : "count"})
+    print(agg_10m)
+    plt.plot(agg_10m.iloc[2000:int(2000 + 3*(1440/minss))], label = "arrivals")
+    plt.plot(agg_10m2.iloc[2000:int(2000 + 3*(1440/minss))], label = "departures")
+    plt.legend()
+    plt.show()
+    return agg_10m
+
+
 if __name__ == "__main__":
-    start = datetime(2015, 1, 1)
-    end = datetime(2019, 4, 30)
-    airports = ICAOTOP50
-    print(f"Generating for {len(airports)} Airports")
+    # start = datetime(2015, 1, 1)
+    # end = datetime(2019, 4, 30)
+    # airports = ICAOTOP50
+    # print(f"Generating for {len(airports)} Airports")
 
-    a = extractData(start, end)
-    a = linearRegressionFormat(a, airports)
-    saveToCSV(a)
+    # a = extractData(start, end)
+    # saveToCSV(a)
 
-    print(readLRDATA().head(50))
-    print(len(a))
+    # print(readLRDATA().head(50))
+    # print(len(a))
+
+    generateNNdata("EHAM")
