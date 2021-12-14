@@ -9,6 +9,7 @@ from sklearn.svm import SVR
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.neighbors import KNeighborsRegressor
 from sklearn.linear_model import LinearRegression
+from sklearn.model_selection import train_test_split
 import numpy as np
 from datetime import datetime
 import matplotlib.pyplot as plt
@@ -39,6 +40,7 @@ def filtering_data_onehot(
     df_2 = data_filter_outliers(df, start, end)
     df_capacity = capacity_calc(df_2, airport, airport_capacity)
     if airport != None:
+        print('selecting airport....')
         df_capacity = df_capacity.query("ADES == @airport")
     df_3 = dummies_encode(df_capacity, airport)
     X_final = scaler(df_3)
@@ -184,7 +186,7 @@ def parameter_search(
     parameters: dict,
     X_train: np.array,
     y_train: np.array,
-    score_string: str = "neg_mean_squared_error",
+    score_string: str,
     n_folds: int = 5,
 ):
     """Optimizes parameters of model using cross-validation.
@@ -214,7 +216,7 @@ def parameter_search(
     ymin = np.max(y_values)
     print("best score = ", ymin)
 
-    if model == KNeighborsRegressor():
+    if model == KNeighborsRegressor:
         plt.plot(parameters["n_neighbors"], y_values * -1)
         plt.scatter(grid_search.best_params_["n_neighbors"], ymin * -1, color="red")
         plt.xlabel("K")
@@ -222,10 +224,17 @@ def parameter_search(
         plt.show()
 
     filedOBT = pd.read_csv("./tools/finaldf.csv", header=0).to_numpy()[:, 1]
-    prediction = grid_search.predict(X_train)
-
     best_parameters = grid_search.best_params_
-    return best_parameters, prediction
+
+    if type(model) == KNeighborsRegressor:
+        best_model = KNeighborsRegressor(n_neighbors= best_parameters['n_neighbors'], weights= best_parameters['weights']) #'n_neighbors' : range(1, 100, 10), 'weights' : ["uniform"]
+
+    X_train_2, X_test, y_train_2, y_test = train_test_split(X_train, y_train, test_size=0.5, random_state=42)
+    best_model.fit(X_train_2, y_train_2)
+    prediction = grid_search.predict(X_test)
+
+    
+    return best_parameters, prediction, y_test
 
 
 def split_into_folds(X: np.array, y: np.array, n_folds: int):
