@@ -63,7 +63,3 @@ predictions_month['month error'] = prediction - Y
 
 predictions_df = pd.DataFrame.from_dict(predictions)
 predictions_month_df = pd.DataFrame.from_dict(predictions_month)
-
-sns.set(style='darkgrid')
-sns.jointplot(x = 'month real', y = 'month prdct', data = predictions_month_df, kind='kde', xlim= [-30, 90], ylim= [-30, 90], fill=True)
-plt.show()

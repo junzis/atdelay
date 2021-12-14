@@ -13,6 +13,7 @@ import numpy as np
 from datetime import datetime
 import matplotlib.pyplot as plt
 import sys
+import seaborn as sns
 
 # sys.path.append(".")
 # from extraction.extract import readLRDATA
@@ -328,3 +329,7 @@ def double_cross_validation(
 
     return best_parameters, performance_score, st_dev
 
+def plot(df: pd.DataFrame, x_name : str, y_name :str):
+    sns.set(style='darkgrid')
+    sns.jointplot(x = x_name, y = y_name, data = df, kind='kde', xlim= [-30, 90], ylim= [-30, 90], fill=True)
+    plt.show()
