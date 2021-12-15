@@ -52,11 +52,11 @@ def filtering_data_onehot(
     X_final = scaler(df_3)
     y = df_capacity["ArrivalDelay"].to_numpy()
 
-    pd.DataFrame((df_3)).to_csv("data/finaldf.csv", header=False, index=False)
-    pd.DataFrame((X_final)).to_csv("data/xdata.csv", header=False, index=False)
-    print("-------Regression model DataFrame to .csv: DONE-------")
-    pd.DataFrame((y)).to_csv("data/ydata.csv", header=False, index=False)
-    print("-------Regression model target variables to .csv: DONE-------")
+    # pd.DataFrame((df_3)).to_csv("data/finaldf.csv", header=False, index=False)
+    # pd.DataFrame((X_final)).to_csv("data/xdata.csv", header=False, index=False)
+    # print("-------Regression model DataFrame to .csv: DONE-------")
+    # pd.DataFrame((y)).to_csv("data/ydata.csv", header=False, index=False)
+    # print("-------Regression model target variables to .csv: DONE-------")
 
     return X_final, y
 
