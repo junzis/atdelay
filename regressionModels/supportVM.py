@@ -51,10 +51,16 @@ Y = Y.reshape((-1,))
 
 print('average y = ', np.average(Y))
 best_parameters, prediction, y_test = parameter_search(models["KNearestNeighbor"], model_parameters["KNearestNeighbor"], X, Y, 'neg_mean_absolute_error')
-predictions['real delay'] = y_test
-predictions['predicted delay'] = prediction
-predictions['error'] = prediction - y_test
+predictions['Real Delay'] = y_test
+predictions['Predicted Delay'] = prediction
+predictions['Error'] = prediction - y_test
 
 predictions_df = pd.DataFrame.from_dict(predictions)
 
-plot(predictions_df, 'real delay', 'predicted delay')
+sns.set_context("notebook", font_scale=1.3)
+sns.set_style("ticks", {"axes.grid": True})
+sns.histplot(x='Error', data=predictions_df, kde= True)
+plt.suptitle('Error Count')
+plt.show()
+
+plot(predictions_df, 'Real Delay', 'Predicted Delay')
