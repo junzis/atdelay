@@ -51,10 +51,10 @@ Y = Y.reshape((-1,))
 
 print('average y = ', np.average(Y))
 best_parameters, prediction, y_test = parameter_search(models["KNearestNeighbor"], model_parameters["KNearestNeighbor"], X, Y, 'neg_mean_absolute_error')
-predictions['real'] = y_test
-predictions['prdct'] = prediction
+predictions['real delay'] = y_test
+predictions['predicted delay'] = prediction
 predictions['error'] = prediction - y_test
 
 predictions_df = pd.DataFrame.from_dict(predictions)
 
-plot(predictions_df, 'real', 'prdct')
+plot(predictions_df, 'real delay', 'predicted delay')

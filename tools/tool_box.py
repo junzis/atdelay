@@ -1,5 +1,6 @@
 from re import L
 import pandas as pd
+from seaborn.rcmod import axes_style
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import KFold, GridSearchCV
 from sklearn.metrics import get_scorer
@@ -309,7 +310,9 @@ def plot(df: pd.DataFrame, x_name: str, y_name: str):
         x_name (str): Name of the column to be used on x-axis
         y_name (str): Name of the column to be used on y-axis
     """
-    sns.set(style="darkgrid")
+    sns.set_context("notebook", font_scale = 1.3)
+    sns.set_style('ticks', {'axes.grid' : True})
+
     g = sns.jointplot(
         x=x_name,
         y=y_name,
@@ -320,6 +323,8 @@ def plot(df: pd.DataFrame, x_name: str, y_name: str):
         fill=True,
     )
     sns.regplot(x=x_name, y=y_name, data=df, scatter=False, ax=g.ax_joint)
+    g.fig.suptitle(f'{x_name} vs {y_name}', size = 20)
+    g.fig.subplots_adjust(top=.9)
     plt.show()
 
 
