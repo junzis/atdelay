@@ -79,6 +79,7 @@ def extractData(
             .assign(FiledAT=lambda x: pd.to_datetime(x.FiledAT, format=dform))
             .assign(ActualOBT=lambda x: pd.to_datetime(x.ActualOBT, format=dform))
             .assign(ActualAT=lambda x: pd.to_datetime(x.ActualAT, format=dform))
+            .query("ADES != ADEP")
         )
         finalData = finalData.append(P, ignore_index=True)
 
@@ -110,6 +111,9 @@ def calculateDelays(P: pd.DataFrame, delayTypes: list = ["arrival", "departure"]
         P = P.assign(
             DepartureDelay=lambda x: (x.ActualOBT - x.FiledOBT).astype("timedelta64[m]")
         )
+    P = P.query(
+        "FiledOBT <= @end & FiledOBT >= @start & ArrivalDelay < 90 & ArrivalDelay > -30"
+    )
     return P
 
 
@@ -150,8 +154,7 @@ def linearRegressionFormat(P: pd.DataFrame, airports: list = ICAOTOP50):
         "ADEPLat",
         "ADEPLong",
         "ADESLat",
-        "ADESLong"
-
+        "ADESLong",
     ]
     P = filterAirports(P, airports)
     P = calculateDelays(P)
@@ -192,38 +195,3 @@ def readLRDATA(saveFolder: str = "LRData", fileName: str = "LRDATA.csv"):
     fullfilename = f"{saveFolder}/{fileName}"
     P = pd.read_csv(fullfilename, header=0, index_col=0)
     return P
-
-def data_filter_outliers(
-    P: pd.DataFrame,
-    start: datetime = datetime(2018, 1, 1),
-    end: datetime = datetime(2019, 12, 31),
-):
-    """Filtering outliers from the data, an outlier is determined to be either 90 min or more late, 30 min early or departing and arriving from/on the same airport
-
-    Args:
-        P (pd.DataFrame): pandas dataframe with all flight data
-        start (datetime, optional): Starting point of the time interval. Defaults to datetime(2018, 1, 1).
-        end (datetime, optional): Ending point of the time interval. Defaults to datetime(2019, 12, 31).
-
-    Returns:
-        pd.DataFrame: dataframe with outliers removed
-    """
-
-    P = P.query(
-        "FiledOBT <= @end & FiledOBT >= @start & ArrivalDelay < 90 & ArrivalDelay > -30 & ADES != ADEP"
-    )
-    return P
-
-
-if __name__ == "__main__":
-    start = datetime(2015, 1, 1)
-    end = datetime(2019, 12, 31)
-    airports = ICAOTOP50
-    print(f"Generating for {len(airports)} Airports")
-
-    a = extractData(start, end)
-    a = linearRegressionFormat(a, airports)
-    saveToCSV(a)
-
-    print(readLRDATA().head(50))
-    print(len(a))
