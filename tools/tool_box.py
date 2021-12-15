@@ -328,7 +328,7 @@ if __name__ == "__main__":
         filename="LRData/LRDATA.csv",
         start=datetime(2018, 1, 1),
         end=datetime(2019, 12, 31),
-        airport="EGLL",
-        airport_capacity=88,
+        airport="LFPG",
+        airport_capacity=120,
     )
 
