@@ -193,6 +193,27 @@ def readLRDATA(saveFolder: str = "LRData", fileName: str = "LRDATA.csv"):
     P = pd.read_csv(fullfilename, header=0, index_col=0)
     return P
 
+def data_filter_outliers(
+    P: pd.DataFrame,
+    start: datetime = datetime(2018, 1, 1),
+    end: datetime = datetime(2019, 12, 31),
+):
+    """Filtering outliers from the data, an outlier is determined to be either 90 min or more late, 30 min early or departing and arriving from/on the same airport
+
+    Args:
+        P (pd.DataFrame): pandas dataframe with all flight data
+        start (datetime, optional): Starting point of the time interval. Defaults to datetime(2018, 1, 1).
+        end (datetime, optional): Ending point of the time interval. Defaults to datetime(2019, 12, 31).
+
+    Returns:
+        pd.DataFrame: dataframe with outliers removed
+    """
+
+    P = P.query(
+        "FiledOBT <= @end & FiledOBT >= @start & ArrivalDelay < 90 & ArrivalDelay > -30 & ADES != ADEP"
+    )
+    return P
+
 
 if __name__ == "__main__":
     start = datetime(2015, 1, 1)
