@@ -11,7 +11,7 @@ from datetime import datetime
 import matplotlib.pyplot as plt
 
 sys.path.append(".")
-from tools.tool_box import filtering_data_ordinal_enc, filtering_data_onehot
+from tools.tool_box import filtering_data_onehot
 from tools.tool_box import parameter_search, get_data
 
 
