@@ -302,7 +302,7 @@ def parameter_search(
     return best_parameters, prediction, y_test
 
 
-def plot(df: pd.DataFrame, x_name: str, y_name: str):
+def plot(df: pd.DataFrame, x_name: str, y_name: str, x_limits: list = None, y_limits: list = None):
     """Plots predictions of a model vs. the real target values.
 
     Args:
@@ -310,21 +310,21 @@ def plot(df: pd.DataFrame, x_name: str, y_name: str):
         x_name (str): Name of the column to be used on x-axis
         y_name (str): Name of the column to be used on y-axis
     """
-    sns.set_context("notebook", font_scale = 1.3)
-    sns.set_style('ticks', {'axes.grid' : True})
-
+    sns.set_context("notebook", font_scale=1.3)
+    sns.set_style("ticks", {"axes.grid": True})
+    print('plotting.....')
     g = sns.jointplot(
         x=x_name,
         y=y_name,
         data=df,
-        kind="kde",
-        xlim=[-30, 90],
-        ylim=[-30, 90],
-        fill=True,
+        kind="hex",
+        xlim=x_limits,
+        ylim=y_limits,
+        # fill=True,
     )
     sns.regplot(x=x_name, y=y_name, data=df, scatter=False, ax=g.ax_joint)
-    g.fig.suptitle(f'{x_name} vs {y_name}', size = 20)
-    g.fig.subplots_adjust(top=.9)
+    g.fig.suptitle(f"{x_name} vs {y_name}", size=20)
+    g.fig.subplots_adjust(top=0.9)
     plt.show()
 
 
@@ -337,3 +337,114 @@ if __name__ == "__main__":
         airport_capacity=120,
     )
 
+
+def flights_per_airport(
+    filename: str = "LRData/LRDATA.csv",
+    start: datetime = datetime(2018, 1, 1),
+    end: datetime = datetime(2019, 12, 31),
+):
+    """Takes all the data points in a filename for a given interval of time, and makes a dict for each airport with amount of flights from that airport. 
+
+    Args:
+        filename (str, optional): Filename of the .csv file to extract data from. Defaults to "LRData/LRDATA.csv".
+        start (datetime, optional): Starting point of the time interval. Defaults to datetime(2018, 1, 1).
+        end (datetime, optional): Ending point of the time interval. Defaults to datetime(2019, 12, 31).
+
+    Returns:
+        dict: Dictionary with all airports as keys and their amount of flights as values.
+        list: list of all airports
+    """
+    df = pd.read_csv(filename, header=0, index_col=0)
+
+    dform = "%Y-%m-%d %H:%M:%S"
+    df = df.assign(FiledOBT=lambda x: pd.to_datetime(x.FiledOBT, format=dform)).assign(
+        FiledAT=lambda x: pd.to_datetime(x.FiledAT, format=dform)
+    )
+    df_2 = data_filter_outliers(df)
+    result = {}
+    airport_list = []
+    lr_df = pd.read_csv("./LRData/LRDATA.csv", header=0, index_col=0)
+
+    print("Making Airport list ---------------------")
+    for airport in lr_df["ADES"]:
+        if airport in airport_list:
+            pass
+        else:
+            airport_list.append(airport)
+    print("airport list = ", airport_list)
+
+    for airport in airport_list:
+        df_airport = df_2.query("ADES == @airport | ADEP == @airport")
+        result[airport] = len(df_airport)
+    return result, airport_list
+
+
+flights_per_airport_dict, airport_list = flights_per_airport()
+acc_per_airport = {
+"LFPO": 4.052652823141702,
+"LOWW": 4.443855332164622,
+"LSZH": 4.711077381748813,
+"LPPT": 5.54990567442422,
+"EKCH": 3.9218357147589145,
+"LEPA": 4.279129192931119,
+"EGCC": 4.3926117886460005,
+"LIMC": 4.579961412211301,
+"ENGM": 4.107187693201358,
+"EGSS": 4.314323616406326,
+"EBBR": 4.0016467162512095,
+"LGAV": 4.472835467211704,
+"EDDL": 4.084764518650214,
+"EFHK": 3.95690555508362,
+"LEMG": 4.7155325377479285,
+"EPWA": 4.519428133965428,
+"EGGW": 4.583746230814193,
+"LSGG": 4.4874583044872365,
+"LKPR": 4.170584482540404,
+"EDDH": 3.7267474546350816,
+"LHBP": 4.107814833219582,
+"LTBA": 7.156262372123445,
+"EGLL": 5.889489890910065,
+"LFPG": 3.795442331570614,
+"EHAM": 4.483325306858709,
+"EDDF": 4.022649400353656,
+"LEMD": 5.261546667909832,
+"LEBL": 4.401206127258698,
+"LTFM": 5.198203077609934,
+"EDDM": 3.856881491942465,
+"EGKK": 5.682978532681429,
+"LIRF": 4.309078262385989,
+"ULLI": 3.6039484816696996,
+"UUEE": 7.8169804906927665,
+"UUWW": 2.7243991225837423,
+"LROP": 4.4270708591669266,
+"UUDD": 4.244190217083899,
+"EDDT": 3.6870329695533064,
+"EGPH": 4.153829718562654,
+"EGBB": 4.456718787221311,
+"UKBB": 4.422615503022433,
+"LEAL": 4.225588940008024,
+"LPPR": 4.60775865949576,
+"LFMN": 4.574162220773571,
+"ESSA": 4.2143734708999,
+"LIME": 4.432959538778985,
+"LFLL": 4.040411700926016,
+"EIDW": 5.696720079868284,
+"EDDK": 3.8098529923643456,
+"EDDS": 3.591418887028652,
+}
+
+dict_2 = {}
+for airport in acc_per_airport:
+    airport_data = []
+    airport_data.append(acc_per_airport[airport])
+    airport_data.append(flights_per_airport_dict[airport])
+    dict_2[airport] = airport_data
+print('dict_2 = ', dict_2)
+airport_array = np.array([None, None])
+for airport in dict_2:
+    airport_array = np.vstack([airport_array, dict_2[airport]])
+airport_array = airport_array[1:, :].astype('float32')
+print('airport_array = ', airport_array)
+df_plot = pd.DataFrame(data = airport_array, columns=['accuracy', 'flight count'])
+print('df_plot = ', df_plot)
+plot(df_plot, 'flight count', 'accuracy')
