@@ -53,11 +53,11 @@ def filtering_data_onehot(
     X_final = scaler(df_3)
     y = df_capacity["ArrivalDelay"].to_numpy()
 
-    pd.DataFrame((df_3)).to_csv("data/finaldf.csv", header=False, index=False)
-    pd.DataFrame((X_final)).to_csv("data/xdata.csv", header=False, index=False)
-    print("-------Regression model DataFrame to .csv: DONE-------")
-    pd.DataFrame((y)).to_csv("data/ydata.csv", header=False, index=False)
-    print("-------Regression model target variables to .csv: DONE-------")
+    # pd.DataFrame((df_3)).to_csv("data/finaldf.csv", header=False, index=False)
+    # pd.DataFrame((X_final)).to_csv("data/xdata.csv", header=False, index=False)
+    # print("-------Regression model DataFrame to .csv: DONE-------")
+    # pd.DataFrame((y)).to_csv("data/ydata.csv", header=False, index=False)
+    # print("-------Regression model target variables to .csv: DONE-------")
 
     return X_final, y
 
@@ -67,7 +67,7 @@ def data_filter_outliers(
     start: datetime = datetime(2018, 1, 1),
     end: datetime = datetime(2019, 12, 31),
 ):
-    """Filtering outliers from the data, an outlier is determined to be either 90 min or more late, 30 min early or deperating and arriving from/on the same airport
+    """Filtering outliers from the data, an outlier is determined to be either 90 min or more late, 30 min early or departing and arriving from/on the same airport
 
     Args:
         P (pd.DataFrame): pandas dataframe with all flight data
@@ -85,12 +85,12 @@ def data_filter_outliers(
 
 
 def capacity_calc(P: pd.DataFrame, airport: str = "EGLL", airport_capacity: int = 88):
-    """Calculating the part capacity of airport used per 15 dependent on number of arrivals and departures and add this to the data
+    """Calculating the part capacity of airport used per 15, dependent on number of arrivals and departures and adding this to the data
 
     Args:
         P (pd.DataFrame): dataframe with all flight data for certain airport
         airport (str, optional): airport for which capacity will be calculated. Defaults to "EGLL".
-        airport_capacity (int, optional): Capacity of airport per hour defined as maximum movements per hour possible. Defaults to 88.
+        airport_capacity (int, optional): Capacity of airport per hour defined as maximum take-offs per hour possible. Defaults to 88.
 
     Returns:
         pd.DataFrame: dataframe with capacity of airport at time of flight 
@@ -237,7 +237,7 @@ def get_data(
     X = np.genfromtxt(f"{folderName}/{fileName_x}", delimiter=",")
     print(f"Data points saved under filename {fileName_x} ---- EXTRACTED.")
     y = np.genfromtxt(f"{folderName}/{fileName_y}", delimiter=",")
-    print(f"Target var saved under filename {fileName_x} ---- EXTRACTED.")
+    print(f"Target variables saved under filename {fileName_y} ---- EXTRACTED.")
 
     return X, y
 
@@ -333,7 +333,7 @@ if __name__ == "__main__":
         filename="LRData/LRDATA.csv",
         start=datetime(2018, 1, 1),
         end=datetime(2019, 12, 31),
-        airport="EGLL",
-        airport_capacity=88,
+        airport="LFPG",
+        airport_capacity=120,
     )
 
