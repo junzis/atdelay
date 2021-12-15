@@ -1,4 +1,3 @@
-from numpy.lib.function_base import extract
 import pandas as pd
 import os
 from glob import glob
@@ -190,11 +189,30 @@ def readLRDATA(saveFolder: str = "LRData", fileName: str = "LRDATA.csv"):
     return P
 
 
-def generalFilterAirport(start, end, airport):
-    file = f"filteredData/general{airport}.csv"
+def generalFilterAirport(
+    start:datetime,
+    end:datetime,
+    airport:str,
+    saveFolder: str = "filteredData",
+):
+    """Generate all the flights for a single airport, save and return as dataframe
+
+    Args:
+        start (datetime): start date to filter for
+        end (datetime): end date to filter for
+        airport (str): ICAO code for the airport
+        saveFolder (str, optional): target save folder. Defaults to "filteredData".
+
+    Returns:
+        pd.DataFrame: Dataframe with all flights for selected filters
+    """
+    file = f"{saveFolder}/general{airport}.csv"
     dform = "%Y-%m-%d %H:%M:%S"
+    if not os.path.exists(saveFolder):
+        os.makedirs(saveFolder)
     if os.path.exists(file):
         P = pd.read_csv(file, header=0, index_col=0)
+        # Condvert datetime strings to actual datetime objects
         P = (
             P.assign(FiledOBT=lambda x: pd.to_datetime(x.FiledOBT, format=dform))
             .assign(FiledAT=lambda x: pd.to_datetime(x.FiledAT, format=dform))
@@ -202,6 +220,7 @@ def generalFilterAirport(start, end, airport):
             .assign(ActualAT=lambda x: pd.to_datetime(x.ActualAT, format=dform))
         )
     else:
+        print(f"Generating {airport} airport data from {start} to {end}")
         P = extractData(start, end)
         P = P.query("`ADES` == @airport | `ADEP` == @airport")
         P = calculateDelays(P)
@@ -210,80 +229,173 @@ def generalFilterAirport(start, end, airport):
     return P
 
 
-def generateNNdata(airport, numRunways=6, numGates=98):
-    start = datetime(2018, 1, 1)
-    end = datetime(2019, 12, 31)
-    P = generalFilterAirport(start, end, airport)
-    # P = P.query("`ADES`==@airport")
-    # print(P.head())
-    P["arriving"] = P.ADES == airport
-    P["departing"] = P.ADEP == airport
-    P["lowcost"] = P.FlightType != "Traditional Scheduled"
-    minss = 5
-    plotdays = 0.5
-    arrivals = (
-        P.groupby(
-            [
-                pd.Grouper(key="FiledAT", freq=f"{minss}min"),
-                # "arriving",
-            ]
+def generateNNdata(
+    airport: str,
+    timeslotLength: int = 15,
+    saveFolder: str = "NNData",
+    forceRegenerateData: bool = False,
+):
+    """Aggregates all flights at a single airport by a certain timeslot.
+
+    Args:
+        airport (str): ICAO code for a single airport
+        timeslotLength (int, optional): length to aggregate flights for in minutes. Defaults to 15 minutes.
+        saveFolder (str, optional): folder to save data in. Defaults to "NNData".
+        forceRegenerateData (bool, optional): force regeneration of data even if it had already been generated. Defaults to False.
+
+    Returns:
+        pd.Dataframe: pandas dataframe with aggregate flight data, unscaled.
+    """
+    filename = f"{saveFolder}/{airport}_{timeslotLength}m.csv"
+
+    dform = "%Y-%m-%d %H:%M:%S"
+    if not os.path.exists(saveFolder):
+        os.makedirs(saveFolder)
+    if os.path.exists(filename):
+        Pagg = pd.read_csv(filename, header=0, index_col=0)
+        Pagg = Pagg.assign(timeslot=lambda x: pd.to_datetime(x.timeslot, format=dform))
+    else:
+        print(
+            f"Generating NN data for {airport} with a timeslot length of {timeslotLength} minutes"
         )
-        .agg(
-            {
-                "departing": "sum",
-                "arriving": "sum",
-                # "ADES": "count",
-                "DepartureDelay": "mean",
-                "ArrivalDelay": "mean",
-                "lowcost": "mean",
-            }
+        start = datetime(2018, 1, 1)
+        end = datetime(2019, 12, 31)
+        P = generalFilterAirport(start, end, airport)
+
+        # Temporary untill weather is added:
+        numRunways = 0
+        numGates = 0
+
+        ### Data preparation for agg function
+        # Are flights arriving or departing?
+        P["arriving"] = P.ADES == airport
+        P["departing"] = P.ADEP == airport
+
+        # Is it a low cost flight?
+        P["lowcost"] = P.FlightType != "Traditional Scheduled"
+
+        # Planned Flight Duration (PFD) in minutes
+        P["PFD"] = P["FiledAT"] - P["FiledOBT"]
+        P["PFD"] = (
+            P["PFD"].dt.components["hours"] * 60 + P["PFD"].dt.components["minutes"]
         )
-        .assign(runways=lambda x: numRunways)
-        .assign(gates=lambda x: numGates)
-        .assign(planes=lambda x: x.arriving - x.departing)
-        .assign(weekend=lambda x: x.index.weekday >= 5)
-        .assign(winter=lambda x: (x.index.month > 11) | (x.index.month < 3))
-        .assign(spring=lambda x: (x.index.month > 2) & (x.index.month < 6))
-        .assign(summer=lambda x: (x.index.month > 5) & (x.index.month < 9))
-        .assign(autumn=lambda x: (x.index.month > 8) & (x.index.month < 12))
-        .fillna(0)
-    )
 
-    Y = arrivals.ArrivalDelay
-    arrivals = arrivals.drop("ArrivalDelay", axis=1)
-    arrivals = arrivals.drop(["runways", "gates"], axis=1)
-    arrivals = arrivals * 1
-    # arrivals.weekend = arrivals.weekend.astype(int)
-    # arrivals.winter = arrivals.winter.astype(int)
-    # arrivals.spring = arrivals.spring.astype(int)
-    # arrivals.summer = arrivals.summer.astype(int)
-    # arrivals.autumn = arrivals.autumn.astype(int)
-    # print(arrivals)
-    arrivals.reset_index(inplace=True)
-    return arrivals.rename(columns={"FiledAT": "timeslot"}), Y
+        # Flight duration for arriving airplanes
+        P.loc[(P.arriving == False), "departuresFlightDuration"] = P.PFD
+        P.loc[(P.arriving == True), "arrivalsFlightDuration"] = P.PFD
+
+        # Delay metrics for arriving and departing airports
+        P.loc[(P.arriving == True), "arrivalsDepartureDelay"] = P.DepartureDelay
+        P.loc[(P.arriving == True), "arrivalsArrivalDelay"] = P.ArrivalDelay
+        P.loc[(P.arriving == False), "departuresDepartureDelay"] = P.DepartureDelay
+        P.loc[(P.arriving == False), "departuresArrivalDelay"] = P.ArrivalDelay
+
+        # Collect the time at which the flights are meant to be at the airport
+        P.loc[(P.arriving == True), "timeAtAirport"] = P.FiledAT
+        P.loc[(P.arriving == False), "timeAtAirport"] = P.FiledOBT
+
+        ### get aggregate features for rolling window
+        Pagg = (
+            P.groupby(
+                [
+                    pd.Grouper(key="timeAtAirport", freq=f"{timeslotLength}min"),
+                ]
+            )
+            .agg(
+                {
+                    "departing": "sum",
+                    "arriving": "sum",
+                    "lowcost": "mean",
+                    "arrivalsFlightDuration": "mean",
+                    "arrivalsDepartureDelay": "mean",
+                    "arrivalsArrivalDelay": "mean",
+                    "departuresFlightDuration": "mean",
+                    "departuresDepartureDelay": "mean",
+                    "departuresArrivalDelay": "mean",
+                }
+            )
+            .assign(planes=lambda x: x.arriving - x.departing)
+            .assign(runways=lambda x: numRunways)
+            .assign(gates=lambda x: numGates)
+            .assign(weekend=lambda x: x.index.weekday >= 5)
+            .assign(winter=lambda x: (x.index.month > 11) | (x.index.month < 3))
+            .assign(spring=lambda x: (x.index.month > 2) & (x.index.month < 6))
+            .assign(summer=lambda x: (x.index.month > 5) & (x.index.month < 9))
+            .assign(autumn=lambda x: (x.index.month > 8) & (x.index.month < 12))
+            .assign(night=lambda x: (x.index.hour >= 0) & (x.index.hour < 6))
+            .assign(morning=lambda x: (x.index.hour >= 6) & (x.index.hour < 12))
+            .assign(afternoon=lambda x: (x.index.hour >= 12) & (x.index.hour < 18))
+            .assign(evening=lambda x: (x.index.hour >= 18) & (x.index.hour <= 23))
+            .drop(["runways", "gates"], axis=1)  # Temp measure until we add weather
+            .reset_index()
+            .rename(columns={"timeAtAirport": "timeslot"})
+            .fillna(0)
+        )
+
+        # turn boolean columns into 1 and 0
+        boolCols = Pagg.columns[Pagg.dtypes.eq(bool)]
+        Pagg.loc[:, boolCols] = Pagg.loc[:, boolCols].astype(int)
+
+        Pagg.to_csv(filename)
+
+    return Pagg
 
 
-def show_heatmap(data):
-    plt.matshow(data.corr())
-    plt.xticks(range(data.shape[1]), data.columns, fontsize=14, rotation=90)
+
+def generateNNdataMultiple(
+    airports: list,
+    timeslotLength: int = 15,
+    saveFolder: str = "NNData",
+    forceRegenerateData:bool = False
+):
+    """Generates NN data for many airports and results all as a dict
+
+    Args:
+        airports (list): list of ICAO airport codes
+        timeslotLength (int, optional): length to aggregate flights for in minutes. Defaults to 15 minutes.
+        saveFolder (str, optional): folder to save data in. Defaults to "NNData".
+        forceRegenerateData (bool, optional): force regeneration of data even if it had already been generated. Defaults to False.
+
+
+    Returns:
+        dict: dictionary of NN data dataframes
+    """
+    dataDict = {}
+    for airport in tqdm(airports):
+        result = generateNNdata(airport, timeslotLength, saveFolder, forceRegenerateData)
+        dataDict[airport] = result
+
+    return dataDict
+def show_heatmap(P: pd.DataFrame, dtkey: str = None):
+    """Shows a heatmap of correlations for a pandas df
+
+    Args:
+        P (pd.DataFrame): pandas data
+        dtkey (str, optional): dt column name for removal. Defaults to None.
+    """
+
+    if dtkey is not None:
+        P = P.drop([dtkey], axis=1)
+
+    plt.matshow(P.corr(), cmap="RdBu_r", vmin=-1, vmax=1)
+    plt.xticks(range(P.shape[1]), P.columns, fontsize=14, rotation=90)
     plt.gca().xaxis.tick_bottom()
-    plt.yticks(range(data.shape[1]), data.columns, fontsize=14)
+    plt.yticks(range(P.shape[1]), P.columns, fontsize=14)
 
     cb = plt.colorbar()
     cb.ax.tick_params(labelsize=14)
     plt.title("Feature Correlation Heatmap", fontsize=14)
 
 
-def min_max_scaling(series):
-    return (series - series.min()) / (series.max() - series.min())
+def show_raw_visualization(P: pd.DataFrame, date_time_key="timeslot"):
+    """Show features of an NN dataframe over time
 
-
-date_time_key = "timeslot"
-
-
-def show_raw_visualization(data):
-    time_data = data[date_time_key]
-    feature_keys = data.columns
+    Args:
+        data (pd.dataFrame): pandas dataframe in NN format
+        date_time_key (str, optional): column that provides datetime. Defaults to "timeslot".
+    """
+    time_data = P[date_time_key]
+    feature_keys = P.columns
     fig, axes = plt.subplots(
         nrows=(len(feature_keys) + 1) // 2,
         ncols=2,
@@ -294,35 +406,19 @@ def show_raw_visualization(data):
     for i in range(len(feature_keys)):
         key = feature_keys[i]
         c = plotcolors[i % (len(plotcolors))]
-        t_data = data[key]
+        t_data = P[key]
         t_data.index = time_data
         t_data.head()
-        ax = t_data.plot(ax=axes[i // 2, i % 2], color=c, title=key, rot=25,)
+        ax = t_data.plot(
+            ax=axes[i // 2, i % 2],
+            color=c,
+            title=key,
+            rot=25,
+        )
         # ax.legend(key)
         ax.grid()
     plt.tight_layout()
 
 
 if __name__ == "__main__":
-    # start = datetime(2015, 1, 1)
-    # end = datetime(2019, 4, 30)
-    # airports = ICAOTOP50
-    # print(f"Generating for {len(airports)} Airports")
-
-    # a = extractData(start, end)
-    # saveToCSV(a)
-
-    # print(readLRDATA().head(50))
-    # print(len(a))
-
-    X, Y = generateNNdata("EHAM")
-
-    X["departing"] = min_max_scaling(X["departing"])
-    X["arriving"] = min_max_scaling(X["arriving"])
-    X["DepartureDelay"] = min_max_scaling(X["DepartureDelay"])
-    X["lowcost"] = min_max_scaling(X["lowcost"])
-
-    print(X)
-    show_heatmap(X)
-    show_raw_visualization(X)
-    plt.show()
+    pass
