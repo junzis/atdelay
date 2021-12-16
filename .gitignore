@@ -6,3 +6,4 @@ data/
 *.pdf
 LRData
 __pycache__
+CNN_MNIST_Test/
