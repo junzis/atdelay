@@ -5,6 +5,7 @@ from datetime import datetime
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 from extraction.extractionvalues import *
+from extraction.airportvalues import *
 
 
 def extractData(
@@ -218,7 +219,7 @@ def generalFilterAirport(
     dform = "%Y-%m-%d %H:%M:%S"
     if not os.path.exists(saveFolder):
         os.makedirs(saveFolder)
-        
+
     if not os.path.exists(file) or forceRegenerateData:
         print(f"Generating {airport} airport data from {start} to {end}")
         P = extractData(start, end)
@@ -347,10 +348,10 @@ def generateNNdata(
             .assign(planes=lambda x: x.arriving - x.departing)
             .assign(runways=lambda x: numRunways)
             .assign(gates=lambda x: numGates)
-            # .assign(
-            #     capacityFilled=lambda x: (x.arriving + x.departing)
-            #     / airportValues[airport]["capacity"]
-            # )
+            .assign(
+                capacityFilled=lambda x: (x.arriving + x.departing)
+                / airport_dict[airport]["capacity"]
+            )
             .assign(weekend=lambda x: x.index.weekday >= 5)
             .assign(winter=lambda x: (x.index.month > 11) | (x.index.month < 3))
             .assign(spring=lambda x: (x.index.month > 2) & (x.index.month < 6))
