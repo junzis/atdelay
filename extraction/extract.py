@@ -190,9 +190,9 @@ def readLRDATA(saveFolder: str = "LRData", fileName: str = "LRDATA.csv"):
 
 
 def generalFilterAirport(
-    start:datetime,
-    end:datetime,
-    airport:str,
+    start: datetime,
+    end: datetime,
+    airport: str,
     saveFolder: str = "filteredData",
 ):
     """Generate all the flights for a single airport, save and return as dataframe
@@ -254,7 +254,7 @@ def generateNNdata(
     if os.path.exists(filename):
         Pagg = pd.read_csv(filename, header=0, index_col=0)
         Pagg = Pagg.assign(timeslot=lambda x: pd.to_datetime(x.timeslot, format=dform))
-    else:
+    elif not os.path.exists(filename) or forceRegenerateData:
         print(
             f"Generating NN data for {airport} with a timeslot length of {timeslotLength} minutes"
         )
@@ -317,6 +317,10 @@ def generateNNdata(
             .assign(planes=lambda x: x.arriving - x.departing)
             .assign(runways=lambda x: numRunways)
             .assign(gates=lambda x: numGates)
+            .assign(
+                capacityFilled=lambda x: (x.arriving + x.departing)
+                / airportValues[airport]["capacity"]
+            )
             .assign(weekend=lambda x: x.index.weekday >= 5)
             .assign(winter=lambda x: (x.index.month > 11) | (x.index.month < 3))
             .assign(spring=lambda x: (x.index.month > 2) & (x.index.month < 6))
@@ -341,12 +345,11 @@ def generateNNdata(
     return Pagg
 
 
-
 def generateNNdataMultiple(
     airports: list,
     timeslotLength: int = 15,
     saveFolder: str = "NNData",
-    forceRegenerateData:bool = False
+    forceRegenerateData: bool = False,
 ):
     """Generates NN data for many airports and results all as a dict
 
@@ -362,10 +365,14 @@ def generateNNdataMultiple(
     """
     dataDict = {}
     for airport in tqdm(airports):
-        result = generateNNdata(airport, timeslotLength, saveFolder, forceRegenerateData)
+        result = generateNNdata(
+            airport, timeslotLength, saveFolder, forceRegenerateData
+        )
         dataDict[airport] = result
 
     return dataDict
+
+
 def show_heatmap(P: pd.DataFrame, dtkey: str = None):
     """Shows a heatmap of correlations for a pandas df
 
