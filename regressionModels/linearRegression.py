@@ -11,8 +11,8 @@ from datetime import datetime
 import matplotlib.pyplot as plt
 
 sys.path.append(".")
-from tools.tool_box import filtering_data_onehot
-from tools.tool_box import parameter_search, get_data
+from regressionModels.tool_box import filtering_data_onehot
+from regressionModels.tool_box import parameter_search, get_data
 
 
 def linear_regression_model(start_degree: int = 1, stop_degree: int = 2):

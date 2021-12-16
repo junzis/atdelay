@@ -1,6 +1,7 @@
 from re import L
 import pandas as pd
 from seaborn.rcmod import axes_style
+from extraction.airportvalues import *
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import KFold, GridSearchCV
 from sklearn.metrics import get_scorer
@@ -20,7 +21,7 @@ def filtering_data_onehot(
     start: datetime = datetime(2018, 1, 1),
     end: datetime = datetime(2019, 12, 31),
     airport: str = "EGLL",
-    airport_capacity: int = 88,
+    save_to_csv: bool = False,
 ):
     """Takes all the data points in a filename for a given interval of time, encodes it using it get_dummies, and focuses prediction efforts on a single airport of choosing. 
 
@@ -38,26 +39,23 @@ def filtering_data_onehot(
     df = pd.read_csv(filename, header=0, index_col=0)
 
     dform = "%Y-%m-%d %H:%M:%S"
-    df = df.assign(FiledOBT=lambda x: pd.to_datetime(x.FiledOBT, format=dform)).assign(
-        FiledAT=lambda x: pd.to_datetime(x.FiledAT, format=dform)
+    df = (
+        df.query("ADEP == @airport|ADES== @airport")
+        .assign(FiledOBT=lambda x: pd.to_datetime(x.FiledOBT, format=dform))
+        .assign(FiledAT=lambda x: pd.to_datetime(x.FiledAT, format=dform))
     )
-    df_2 = data_filter_outliers(df)
-    if airport != None:
-        print(f"-------Selecting airport {airport}-------")
-        df_capacity = capacity_calc(df_2, airport, airport_capacity)
-        df_capacity = df_capacity.query("ADES == @airport")
-    else:
-        df_capacity = df_2
+    df_capacity = capacity_calc(df, airport, airport_dict[airport]["capacity"])
     df_time_distance = time_distance(df_capacity)
     df_3 = dummies_encode(df_time_distance, airport)
     X_final = scaler(df_3)
     y = df_capacity["ArrivalDelay"].to_numpy()
 
-    # pd.DataFrame((df_3)).to_csv("data/finaldf.csv", header=False, index=False)
-    # pd.DataFrame((X_final)).to_csv("data/xdata.csv", header=False, index=False)
-    # print("-------Regression model DataFrame to .csv: DONE-------")
-    # pd.DataFrame((y)).to_csv("data/ydata.csv", header=False, index=False)
-    # print("-------Regression model target variables to .csv: DONE-------")
+    if save_to_csv:
+        pd.DataFrame((df_3)).to_csv("data/finaldf.csv", header=False, index=False)
+        pd.DataFrame((X_final)).to_csv("data/xdata.csv", header=False, index=False)
+        print("-------Regression model DataFrame to .csv: DONE-------")
+        pd.DataFrame((y)).to_csv("data/ydata.csv", header=False, index=False)
+        print("-------Regression model target variables to .csv: DONE-------")
 
     return X_final, y
 
@@ -124,7 +122,9 @@ def capacity_calc(P: pd.DataFrame, airport: str = "EGLL", airport_capacity: int 
 
     new_df["Time_tuple"] = list(zip(new_df.Date, new_df.Hour, new_df.Minutes))
     new_df["capacity"] = new_df["Time_tuple"].map(cap_dict) / airport_capacity / 4
-    new_df = new_df.drop(["Time_tuple", "Date", "Hour", "Minutes", "Time"], axis=1)
+    new_df = new_df.drop(
+        ["Time_tuple", "Date", "Hour", "Minutes", "Time"], axis=1
+    ).query("ADES == @airport")
     new_df = new_df.sort_values("FiledAT")
 
     return new_df
@@ -219,7 +219,7 @@ def scaler(P: pd.DataFrame):
     return X_scaled_array
 
 
-def get_data(
+def get_preprocessed_data(
     folderName: str = "data",
     fileName_x: str = "xdata.csv",
     fileName_y: str = "ydata.csv",
@@ -284,7 +284,7 @@ def parameter_search(
         plt.ylabel("MSE")
         plt.show()
 
-    filedOBT = pd.read_csv("./tools/finaldf.csv", header=0).to_numpy()[:, 1]
+    filedOBT = pd.read_csv("./data/finaldf.csv", header=0).to_numpy()[:, 1]
     best_parameters = grid_search.best_params_
 
     if type(model) == KNeighborsRegressor:
@@ -302,7 +302,13 @@ def parameter_search(
     return best_parameters, prediction, y_test
 
 
-def plot(df: pd.DataFrame, x_name: str, y_name: str, x_limits: list = None, y_limits: list = None):
+def plot(
+    df: pd.DataFrame,
+    x_name: str,
+    y_name: str,
+    x_limits: list = None,
+    y_limits: list = None,
+):
     """Plots predictions of a model vs. the real target values.
 
     Args:
@@ -312,7 +318,7 @@ def plot(df: pd.DataFrame, x_name: str, y_name: str, x_limits: list = None, y_li
     """
     sns.set_context("notebook", font_scale=1.3)
     sns.set_style("ticks", {"axes.grid": True})
-    print('plotting.....')
+    print("plotting.....")
     g = sns.jointplot(
         x=x_name,
         y=y_name,
@@ -327,16 +333,6 @@ def plot(df: pd.DataFrame, x_name: str, y_name: str, x_limits: list = None, y_li
     g.fig.suptitle(f"{x_name} vs {y_name}", size=20)
     g.fig.subplots_adjust(top=0.9)
     plt.show()
-
-
-if __name__ == "__main__":
-    X, y = filtering_data_onehot(
-        filename="LRData/LRDATA.csv",
-        start=datetime(2018, 1, 1),
-        end=datetime(2019, 12, 31),
-        airport="LFPG",
-        airport_capacity=120,
-    )
 
 
 def flights_per_airport(
@@ -379,62 +375,12 @@ def flights_per_airport(
         result[airport] = len(df_airport)
     return result, airport_list
 
+
 def plot_flightcount_vs_error():
     """Finds amount of flights for each airport and plots the mean absolute error of random forest model against it. 
     """
     flights_per_airport_dict, airport_list = flights_per_airport()
-    acc_per_airport = {
-    "LFPO": 4.052652823141702,
-    "LOWW": 4.443855332164622,
-    "LSZH": 4.711077381748813,
-    "LPPT": 5.54990567442422,
-    "EKCH": 3.9218357147589145,
-    "LEPA": 4.279129192931119,
-    "EGCC": 4.3926117886460005,
-    "LIMC": 4.579961412211301,
-    "ENGM": 4.107187693201358,
-    "EGSS": 4.314323616406326,
-    "EBBR": 4.0016467162512095,
-    "LGAV": 4.472835467211704,
-    "EDDL": 4.084764518650214,
-    "EFHK": 3.95690555508362,
-    "LEMG": 4.7155325377479285,
-    "EPWA": 4.519428133965428,
-    "EGGW": 4.583746230814193,
-    "LSGG": 4.4874583044872365,
-    "LKPR": 4.170584482540404,
-    "EDDH": 3.7267474546350816,
-    "LHBP": 4.107814833219582,
-    "LTBA": 7.156262372123445,
-    "EGLL": 5.889489890910065,
-    "LFPG": 3.795442331570614,
-    "EHAM": 4.483325306858709,
-    "EDDF": 4.022649400353656,
-    "LEMD": 5.261546667909832,
-    "LEBL": 4.401206127258698,
-    "LTFM": 5.198203077609934,
-    "EDDM": 3.856881491942465,
-    "EGKK": 5.682978532681429,
-    "LIRF": 4.309078262385989,
-    "ULLI": 3.6039484816696996,
-    "UUEE": 7.8169804906927665,
-    "UUWW": 2.7243991225837423,
-    "LROP": 4.4270708591669266,
-    "UUDD": 4.244190217083899,
-    "EDDT": 3.6870329695533064,
-    "EGPH": 4.153829718562654,
-    "EGBB": 4.456718787221311,
-    "UKBB": 4.422615503022433,
-    "LEAL": 4.225588940008024,
-    "LPPR": 4.60775865949576,
-    "LFMN": 4.574162220773571,
-    "ESSA": 4.2143734708999,
-    "LIME": 4.432959538778985,
-    "LFLL": 4.040411700926016,
-    "EIDW": 5.696720079868284,
-    "EDDK": 3.8098529923643456,
-    "EDDS": 3.591418887028652,
-    }
+    acc_per_airport = error_dict
 
     dict_2 = {}
     for airport in acc_per_airport:
@@ -445,6 +391,7 @@ def plot_flightcount_vs_error():
     airport_array = np.array([None, None])
     for airport in dict_2:
         airport_array = np.vstack([airport_array, dict_2[airport]])
-    airport_array = airport_array[1:, :].astype('float32')
-    df_plot = pd.DataFrame(data = airport_array, columns=['error', 'flight count'])
-    plot(df_plot, 'flight count', 'error')
+    airport_array = airport_array[1:, :].astype("float32")
+    df_plot = pd.DataFrame(data=airport_array, columns=["error", "flight count"])
+    plot(df_plot, "flight count", "error")
+
