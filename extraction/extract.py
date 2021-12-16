@@ -111,7 +111,7 @@ def calculateDelays(P: pd.DataFrame, delayTypes: list = ["arrival", "departure"]
         P = P.assign(
             DepartureDelay=lambda x: (x.ActualOBT - x.FiledOBT).astype("timedelta64[m]")
         )
-    P = P.query("ArrivalDelay < 90 & ArrivalDelay > -30")
+    P = P.query("ArrivalDelay < 90 & ArrivalDelay > -30 * DepartureDelay < 90 & DepartureDelay > -30 ")
     return P
 
 
