@@ -5,7 +5,7 @@ from glob import glob
 from datetime import datetime
 from tqdm import tqdm
 import matplotlib.pyplot as plt
-from extractionvalues import *
+from extraction.extractionvalues import *
 
 
 def extractData(
@@ -111,9 +111,7 @@ def calculateDelays(P: pd.DataFrame, delayTypes: list = ["arrival", "departure"]
         P = P.assign(
             DepartureDelay=lambda x: (x.ActualOBT - x.FiledOBT).astype("timedelta64[m]")
         )
-    P = P.query(
-        "FiledOBT <= @end & FiledOBT >= @start & ArrivalDelay < 90 & ArrivalDelay > -30"
-    )
+    P = P.query("ArrivalDelay < 90 & ArrivalDelay > -30")
     return P
 
 

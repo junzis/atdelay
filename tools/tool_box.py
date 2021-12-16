@@ -328,16 +328,6 @@ def plot(df: pd.DataFrame, x_name: str, y_name: str, x_limits: list = None, y_li
     plt.show()
 
 
-if __name__ == "__main__":
-    X, y = filtering_data_onehot(
-        filename="LRData/LRDATA.csv",
-        start=datetime(2018, 1, 1),
-        end=datetime(2019, 12, 31),
-        airport="LFPG",
-        airport_capacity=120,
-    )
-
-
 def flights_per_airport(
     filename: str = "LRData/LRDATA.csv",
     start: datetime = datetime(2018, 1, 1),
