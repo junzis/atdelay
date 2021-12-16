@@ -245,6 +245,8 @@ def generateNNdata(
     saveFolder: str = "NNData",
     catagoricalFlightDuration: bool = False,
     forceRegenerateData: bool = False,
+    start: datetime = datetime(2018, 1, 1),
+    end: datetime = datetime(2019, 12, 31),
 ):
     """Aggregates all flights at a single airport by a certain timeslot.
 
@@ -255,7 +257,8 @@ def generateNNdata(
         catagoricalFlightDelay (bool, optional): If false, flight delay is presented as average.\
              If True it is generated as bins from 0-3, 3-6 and >6. Defaults to False.
         forceRegenerateData (bool, optional): force regeneration of data even if it had already been generated. Defaults to False.
-
+        start (datetime, optional): start date to filter for
+        end (datetime, optional): end date to filter for
     Returns:
         pd.Dataframe: pandas dataframe with aggregate flight data, unscaled.
     """
@@ -269,8 +272,6 @@ def generateNNdata(
         print(
             f"Generating NN data for {airport} with a timeslot length of {timeslotLength} minutes"
         )
-        start = datetime(2018, 1, 1)
-        end = datetime(2019, 12, 31)
         P = generalFilterAirport(start, end, airport)
 
         # Temporary untill weather is added:
@@ -371,8 +372,7 @@ def generateNNdata(
         boolCols = Pagg.columns[Pagg.dtypes.eq(bool)]
         Pagg.loc[:, boolCols] = Pagg.loc[:, boolCols].astype(int)
 
-
-        # there are two ways the team wanted the flight 
+        # there are two ways the team wanted the flight
         # duration in bins of 3 hours or as an average,
         #  here the data gets augmented based on the chase
         if catagoricalFlightDuration:
@@ -406,6 +406,8 @@ def generateNNdataMultiple(
     timeslotLength: int = 15,
     saveFolder: str = "NNData",
     forceRegenerateData: bool = False,
+    start: datetime = datetime(2018, 1, 1),
+    end: datetime = datetime(2019, 12, 31),
 ):
     """Generates NN data for many airports and results all as a dict
 
@@ -422,7 +424,12 @@ def generateNNdataMultiple(
     dataDict = {}
     for airport in tqdm(airports):
         result = generateNNdata(
-            airport, timeslotLength, saveFolder, forceRegenerateData
+            airport,
+            timeslotLength,
+            saveFolder,
+            forceRegenerateData,
+            start=start,
+            end=end,
         )
         dataDict[airport] = result
 
