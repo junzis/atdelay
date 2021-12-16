@@ -317,7 +317,7 @@ def generateNNdata(
         P.loc[(P.arriving == True), "timeAtAirport"] = P.FiledAT
         P.loc[(P.arriving == False), "timeAtAirport"] = P.FiledOBT
 
-        P = P.fillna(0)
+        # P = P.fillna(0)
 
         ### get aggregate features for rolling window
         Pagg = (
@@ -371,6 +371,10 @@ def generateNNdata(
         boolCols = Pagg.columns[Pagg.dtypes.eq(bool)]
         Pagg.loc[:, boolCols] = Pagg.loc[:, boolCols].astype(int)
 
+
+        # there are two ways the team wanted the flight 
+        # duration in bins of 3 hours or as an average,
+        #  here the data gets augmented based on the chase
         if catagoricalFlightDuration:
             Pagg = Pagg.drop(
                 ["departuresFlightDuration", "arrivalsFlightDuration"], axis=1
