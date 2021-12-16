@@ -106,3 +106,16 @@ marketSegmentsExtended = [
     "Lowcost",
     "Charter",
 ]
+
+plotcolors = [
+    "blue",
+    "orange",
+    "green",
+    "red",
+    "purple",
+    "brown",
+    "pink",
+    "gray",
+    "olive",
+    "cyan",
+]
