@@ -5,7 +5,7 @@ from glob import glob
 from datetime import datetime
 from tqdm import tqdm
 import matplotlib.pyplot as plt
-from extractionvalues import *
+from extraction.extractionvalues import *
 
 
 def extractData(
@@ -79,6 +79,7 @@ def extractData(
             .assign(FiledAT=lambda x: pd.to_datetime(x.FiledAT, format=dform))
             .assign(ActualOBT=lambda x: pd.to_datetime(x.ActualOBT, format=dform))
             .assign(ActualAT=lambda x: pd.to_datetime(x.ActualAT, format=dform))
+            .query("ADES != ADEP")
         )
         finalData = finalData.append(P, ignore_index=True)
 
@@ -110,6 +111,7 @@ def calculateDelays(P: pd.DataFrame, delayTypes: list = ["arrival", "departure"]
         P = P.assign(
             DepartureDelay=lambda x: (x.ActualOBT - x.FiledOBT).astype("timedelta64[m]")
         )
+    P = P.query("ArrivalDelay < 90 & ArrivalDelay > -30 & DepartureDelay < 90 & DepartureDelay > -30 ")
     return P
 
 
@@ -147,6 +149,10 @@ def linearRegressionFormat(P: pd.DataFrame, airports: list = ICAOTOP50):
         "ACOperator",
         "ArrivalDelay",
         "DepartureDelay",
+        "ADEPLat",
+        "ADEPLong",
+        "ADESLat",
+        "ADESLong",
     ]
     P = filterAirports(P, airports)
     P = calculateDelays(P)
@@ -187,17 +193,3 @@ def readLRDATA(saveFolder: str = "LRData", fileName: str = "LRDATA.csv"):
     fullfilename = f"{saveFolder}/{fileName}"
     P = pd.read_csv(fullfilename, header=0, index_col=0)
     return P
-
-  
-if __name__ == "__main__":
-    start = datetime(2015, 1, 1)
-    end = datetime(2019, 4, 30)
-    airports = ICAOTOP50
-    print(f"Generating for {len(airports)} Airports")
-
-    a = extractData(start, end)
-    a = linearRegressionFormat(a, airports)
-    saveToCSV(a)
-
-    print(readLRDATA().head(50))
-    print(len(a))
