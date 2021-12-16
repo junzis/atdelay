@@ -57,10 +57,10 @@ predictions['Error'] = prediction - y_test
 
 predictions_df = pd.DataFrame.from_dict(predictions)
 
-sns.set_context("notebook", font_scale=1.3)
-sns.set_style("ticks", {"axes.grid": True})
-sns.histplot(x='Error', data=predictions_df, kde= True)
-plt.suptitle('Error Count')
-plt.show()
+# sns.set_context("notebook", font_scale=1.3)
+# sns.set_style("ticks", {"axes.grid": True})
+# sns.histplot(x='Error', data=predictions_df, kde= True)
+# plt.suptitle('Error Count')
+# plt.show()
 
 plot(predictions_df, 'Real Delay', 'Predicted Delay')

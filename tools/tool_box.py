@@ -321,6 +321,7 @@ def plot(df: pd.DataFrame, x_name: str, y_name: str, x_limits: list = None, y_li
         xlim=x_limits,
         ylim=y_limits,
         # fill=True,
+        color="#4CB391"
     )
     sns.regplot(x=x_name, y=y_name, data=df, scatter=False, ax=g.ax_joint)
     g.fig.suptitle(f"{x_name} vs {y_name}", size=20)
@@ -379,6 +380,8 @@ def flights_per_airport(
     return result, airport_list
 
 def plot_flightcount_vs_error():
+    """Finds amount of flights for each airport and plots the mean absolute error of random forest model against it. 
+    """
     flights_per_airport_dict, airport_list = flights_per_airport()
     acc_per_airport = {
     "LFPO": 4.052652823141702,
