@@ -233,6 +233,7 @@ def generateNNdata(
     airport: str,
     timeslotLength: int = 15,
     saveFolder: str = "NNData",
+    catagoricalFlightDelay: bool = False,
     forceRegenerateData: bool = False,
 ):
     """Aggregates all flights at a single airport by a certain timeslot.
@@ -241,6 +242,8 @@ def generateNNdata(
         airport (str): ICAO code for a single airport
         timeslotLength (int, optional): length to aggregate flights for in minutes. Defaults to 15 minutes.
         saveFolder (str, optional): folder to save data in. Defaults to "NNData".
+        catagoricalFlightDelay (bool, optional): If false, flight delay is presented as average.\
+             If True it is generated as bins from 0-3, 3-6 and >6. Defaults to False.
         forceRegenerateData (bool, optional): force regeneration of data even if it had already been generated. Defaults to False.
 
     Returns:
@@ -251,10 +254,8 @@ def generateNNdata(
     dform = "%Y-%m-%d %H:%M:%S"
     if not os.path.exists(saveFolder):
         os.makedirs(saveFolder)
-    if os.path.exists(filename):
-        Pagg = pd.read_csv(filename, header=0, index_col=0)
-        Pagg = Pagg.assign(timeslot=lambda x: pd.to_datetime(x.timeslot, format=dform))
-    elif not os.path.exists(filename) or forceRegenerateData:
+
+    if not os.path.exists(filename) or forceRegenerateData:
         print(
             f"Generating NN data for {airport} with a timeslot length of {timeslotLength} minutes"
         )
@@ -283,6 +284,14 @@ def generateNNdata(
         # Flight duration for arriving airplanes
         P.loc[(P.arriving == False), "departuresFlightDuration"] = P.PFD
         P.loc[(P.arriving == True), "arrivalsFlightDuration"] = P.PFD
+        
+        P["departuresFlightDuration0to3"] = P.departuresFlightDuration < 3 * 60
+        P["departuresFlightDuration3to6"] = (P.departuresFlightDuration >= 3 * 60) & (P.departuresFlightDuration < 6*60)
+        P["departuresFlightDuration6orMore"] = P.departuresFlightDuration >= 6 * 60
+
+        P["arrivalsFlightDuration0to3"] = P.arrivalsFlightDuration < 3 * 60
+        P["arrivalsFlightDuration3to6"] = (P.arrivalsFlightDuration >= 3 * 60) & (P.arrivalsFlightDuration < 6*60)
+        P["arrivalsFlightDuration6orMore"] = P.arrivalsFlightDuration >= 6 * 60
 
         # Delay metrics for arriving and departing airports
         P.loc[(P.arriving == True), "arrivalsDepartureDelay"] = P.DepartureDelay
@@ -293,6 +302,8 @@ def generateNNdata(
         # Collect the time at which the flights are meant to be at the airport
         P.loc[(P.arriving == True), "timeAtAirport"] = P.FiledAT
         P.loc[(P.arriving == False), "timeAtAirport"] = P.FiledOBT
+
+        P = P.fillna(0)
 
         ### get aggregate features for rolling window
         Pagg = (
@@ -312,15 +323,21 @@ def generateNNdata(
                     "departuresFlightDuration": "mean",
                     "departuresDepartureDelay": "mean",
                     "departuresArrivalDelay": "mean",
+                    "departuresFlightDuration0to3": "mean",
+                    "departuresFlightDuration3to6": "mean",
+                    "departuresFlightDuration6orMore": "mean",
+                    "arrivalsFlightDuration0to3": "mean",
+                    "arrivalsFlightDuration3to6": "mean",
+                    "arrivalsFlightDuration6orMore": "mean",
                 }
             )
             .assign(planes=lambda x: x.arriving - x.departing)
             .assign(runways=lambda x: numRunways)
             .assign(gates=lambda x: numGates)
-            .assign(
-                capacityFilled=lambda x: (x.arriving + x.departing)
-                / airportValues[airport]["capacity"]
-            )
+            # .assign(
+            #     capacityFilled=lambda x: (x.arriving + x.departing)
+            #     / airportValues[airport]["capacity"]
+            # )
             .assign(weekend=lambda x: x.index.weekday >= 5)
             .assign(winter=lambda x: (x.index.month > 11) | (x.index.month < 3))
             .assign(spring=lambda x: (x.index.month > 2) & (x.index.month < 6))
@@ -340,7 +357,26 @@ def generateNNdata(
         boolCols = Pagg.columns[Pagg.dtypes.eq(bool)]
         Pagg.loc[:, boolCols] = Pagg.loc[:, boolCols].astype(int)
 
+        if catagoricalFlightDelay:
+            Pagg.drop(["departuresFlightDuration"], axis=1)
+        else:
+            Pagg.drop(
+                [
+                    "departuresFlightDuration0to3",
+                    "departuresFlightDuration3to6",
+                    "departuresFlightDuration6orMore",
+                    "arrivalsFlightDuration0to3",
+                    "arrivalsFlightDuration3to6",
+                    "arrivalsFlightDuration6orMore",
+                ],
+                axis=1,
+            )
+
         Pagg.to_csv(filename)
+
+    else:
+        Pagg = pd.read_csv(filename, header=0, index_col=0)
+        Pagg = Pagg.assign(timeslot=lambda x: pd.to_datetime(x.timeslot, format=dform))
 
     return Pagg
 
@@ -401,11 +437,12 @@ def show_raw_visualization(P: pd.DataFrame, date_time_key="timeslot"):
         data (pd.dataFrame): pandas dataframe in NN format
         date_time_key (str, optional): column that provides datetime. Defaults to "timeslot".
     """
+    ncols = 2
     time_data = P[date_time_key]
     feature_keys = P.columns
     fig, axes = plt.subplots(
-        nrows=(len(feature_keys) + 1) // 2,
-        ncols=2,
+        nrows=(len(feature_keys) + ncols - 1) // ncols,
+        ncols=ncols,
         figsize=(20, 15),
         dpi=70,
         sharex=True,
@@ -417,7 +454,7 @@ def show_raw_visualization(P: pd.DataFrame, date_time_key="timeslot"):
         t_data.index = time_data
         t_data.head()
         ax = t_data.plot(
-            ax=axes[i // 2, i % 2],
+            ax=axes[i // ncols, i % ncols],
             color=c,
             title=key,
             rot=25,
@@ -428,4 +465,7 @@ def show_raw_visualization(P: pd.DataFrame, date_time_key="timeslot"):
 
 
 if __name__ == "__main__":
+    X = generateNNdata("EHAM", forceRegenerateData=True, catagoricalFlightDelay=True)
+    show_raw_visualization(X)
+    plt.show()
     pass
