@@ -110,7 +110,9 @@ def calculateDelays(P: pd.DataFrame, delayTypes: list = ["arrival", "departure"]
         P = P.assign(
             DepartureDelay=lambda x: (x.ActualOBT - x.FiledOBT).astype("timedelta64[m]")
         )
-    P = P.query("ArrivalDelay < 90 & ArrivalDelay > -30 & DepartureDelay < 90 & DepartureDelay > -30 ")
+    P = P.query(
+        "ArrivalDelay < 90 & ArrivalDelay > -30 & DepartureDelay < 90 & DepartureDelay > -30 "
+    )
     return P
 
 
@@ -199,6 +201,7 @@ def generalFilterAirport(
     end: datetime,
     airport: str,
     saveFolder: str = "filteredData",
+    forceRegenerateData: bool = False,
 ):
     """Generate all the flights for a single airport, save and return as dataframe
 
@@ -215,7 +218,14 @@ def generalFilterAirport(
     dform = "%Y-%m-%d %H:%M:%S"
     if not os.path.exists(saveFolder):
         os.makedirs(saveFolder)
-    if os.path.exists(file):
+        
+    if not os.path.exists(file) or forceRegenerateData:
+        print(f"Generating {airport} airport data from {start} to {end}")
+        P = extractData(start, end)
+        P = P.query("`ADES` == @airport | `ADEP` == @airport")
+        P = calculateDelays(P)
+        P.to_csv(file)
+    else:
         P = pd.read_csv(file, header=0, index_col=0)
         # Condvert datetime strings to actual datetime objects
         P = (
@@ -224,12 +234,6 @@ def generalFilterAirport(
             .assign(ActualOBT=lambda x: pd.to_datetime(x.ActualOBT, format=dform))
             .assign(ActualAT=lambda x: pd.to_datetime(x.ActualAT, format=dform))
         )
-    else:
-        print(f"Generating {airport} airport data from {start} to {end}")
-        P = extractData(start, end)
-        P = P.query("`ADES` == @airport | `ADEP` == @airport")
-        P = calculateDelays(P)
-        P.to_csv(file)
 
     return P
 
@@ -238,7 +242,7 @@ def generateNNdata(
     airport: str,
     timeslotLength: int = 15,
     saveFolder: str = "NNData",
-    catagoricalFlightDelay: bool = False,
+    catagoricalFlightDuration: bool = False,
     forceRegenerateData: bool = False,
 ):
     """Aggregates all flights at a single airport by a certain timeslot.
@@ -289,13 +293,17 @@ def generateNNdata(
         # Flight duration for arriving airplanes
         P.loc[(P.arriving == False), "departuresFlightDuration"] = P.PFD
         P.loc[(P.arriving == True), "arrivalsFlightDuration"] = P.PFD
-        
+
         P["departuresFlightDuration0to3"] = P.departuresFlightDuration < 3 * 60
-        P["departuresFlightDuration3to6"] = (P.departuresFlightDuration >= 3 * 60) & (P.departuresFlightDuration < 6*60)
+        P["departuresFlightDuration3to6"] = (P.departuresFlightDuration >= 3 * 60) & (
+            P.departuresFlightDuration < 6 * 60
+        )
         P["departuresFlightDuration6orMore"] = P.departuresFlightDuration >= 6 * 60
 
         P["arrivalsFlightDuration0to3"] = P.arrivalsFlightDuration < 3 * 60
-        P["arrivalsFlightDuration3to6"] = (P.arrivalsFlightDuration >= 3 * 60) & (P.arrivalsFlightDuration < 6*60)
+        P["arrivalsFlightDuration3to6"] = (P.arrivalsFlightDuration >= 3 * 60) & (
+            P.arrivalsFlightDuration < 6 * 60
+        )
         P["arrivalsFlightDuration6orMore"] = P.arrivalsFlightDuration >= 6 * 60
 
         # Delay metrics for arriving and departing airports
@@ -362,10 +370,12 @@ def generateNNdata(
         boolCols = Pagg.columns[Pagg.dtypes.eq(bool)]
         Pagg.loc[:, boolCols] = Pagg.loc[:, boolCols].astype(int)
 
-        if catagoricalFlightDelay:
-            Pagg.drop(["departuresFlightDuration"], axis=1)
+        if catagoricalFlightDuration:
+            Pagg = Pagg.drop(
+                ["departuresFlightDuration", "arrivalsFlightDuration"], axis=1
+            )
         else:
-            Pagg.drop(
+            Pagg = Pagg.drop(
                 [
                     "departuresFlightDuration0to3",
                     "departuresFlightDuration3to6",
@@ -442,7 +452,7 @@ def show_raw_visualization(P: pd.DataFrame, date_time_key="timeslot"):
         data (pd.dataFrame): pandas dataframe in NN format
         date_time_key (str, optional): column that provides datetime. Defaults to "timeslot".
     """
-    ncols = 2
+    ncols = 3
     time_data = P[date_time_key]
     feature_keys = P.columns
     fig, axes = plt.subplots(
@@ -470,7 +480,4 @@ def show_raw_visualization(P: pd.DataFrame, date_time_key="timeslot"):
 
 
 if __name__ == "__main__":
-    X = generateNNdata("EHAM", forceRegenerateData=True, catagoricalFlightDelay=True)
-    show_raw_visualization(X)
-    plt.show()
     pass
