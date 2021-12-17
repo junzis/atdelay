@@ -126,7 +126,7 @@ def filterAirports(P: pd.DataFrame, airports: list):
         pd.DataFrame: filtered flights dataframe
     """
 
-    P = P.query("`ADEP` in @airports & `ADES` in @airports")
+    P = P.query("`ADEP` in @airports | `ADES` in @airports")
     return P
 
 
