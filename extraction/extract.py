@@ -452,7 +452,7 @@ def generateNNdataMultiple(
             end=end,
         )
         if GNNFormat:
-            result = {"X": result[0], "Y": result[1]}
+            result = {"X": result[0], "Y": result[1], "T": result[2]}
 
         dataDict[airport] = result
 
