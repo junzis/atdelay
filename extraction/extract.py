@@ -242,6 +242,7 @@ def generalFilterAirport(
 def generateNNdata(
     airport: str,
     timeslotLength: int = 15,
+    GNNFormat: bool = False,
     saveFolder: str = "NNData",
     catagoricalFlightDuration: bool = False,
     forceRegenerateData: bool = False,
@@ -398,12 +399,30 @@ def generateNNdata(
         Pagg = pd.read_csv(filename, header=0, index_col=0)
         Pagg = Pagg.assign(timeslot=lambda x: pd.to_datetime(x.timeslot, format=dform))
 
-    return Pagg
+    if GNNFormat and catagoricalFlightDuration:
+        raise ValueError("GNNFormat and catagoricalFlightDuration are not compatible")
+
+    if GNNFormat:
+        Y = Pagg.loc[:, ["arrivalsArrivalDelay", "departuresDepartureDelay"]]
+        T = Pagg.loc[:, ["timeslot"]]
+        Pagg = Pagg.drop(
+            [
+                "arrivalsArrivalDelay",
+                "departuresDepartureDelay",
+                "departuresArrivalDelay",
+                "timeslot"
+            ],
+            axis=1,
+        )
+        return Pagg, Y, T
+    else:
+        return Pagg
 
 
 def generateNNdataMultiple(
     airports: list,
     timeslotLength: int = 15,
+    GNNFormat: bool = False,
     saveFolder: str = "NNData",
     forceRegenerateData: bool = False,
     start: datetime = datetime(2018, 1, 1),
@@ -426,11 +445,15 @@ def generateNNdataMultiple(
         result = generateNNdata(
             airport,
             timeslotLength,
+            GNNFormat,
             saveFolder,
             forceRegenerateData,
             start=start,
             end=end,
         )
+        if GNNFormat:
+            result = {"X": result[0], "Y": result[1]}
+
         dataDict[airport] = result
 
     return dataDict
