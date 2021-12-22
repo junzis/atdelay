@@ -101,7 +101,21 @@ def fetch_grb(year, month, day, hour, pred=0, plot_data : bool = False):
     else:
         print('File already exists!')
     
-    
+def npy_to_df(year: int = 2019):
+    Airport_loc = {'EHAM' : [52.30806, 4.76417]}
+    for airport in Airport_loc:
+        long = int(Airport_loc[airport][0])
+        lat = int(Airport_loc[airport][1])
+        df = pd.DataFrame(columns= ['vis', 'gust', 't', 'cpofp', 'lftx', 'cape'])
+        print(df)
+        print('doing variable = ', variable)
+        for month in [3, 6, 9, 12]:
+            for day in range(1, 31):
+                for hour in [0, 6, 12, 18]:
+                    for variable in ['vis', 'gust', 't', 'cpofp', 'lftx', 'cape']:
+                        weather_array = np.loadtxt(f'./data/Weather_Data_Filtered/{variable}/{year}/{variable}_{year}_{month}_{day}_{hour}.npy')
+                        df.append()
+    pass
     
 
 if __name__ == "__main__":
@@ -113,8 +127,10 @@ if __name__ == "__main__":
     # basic_data_reader('./data/Schiphol_Weather_Data.grib')
 
     type_data = 'gust'
-    for month2 in [3, 6, 9, 12]:
-        for day in range(1, 31):
-            for hour in [0, 6, 12, 18]:
-                basic_data_reader(f'./data/Weather_Data_Filtered/{type_data}/2019/{type_data}_{2019}_{month2}_{day}_{hour}.npy', type_data, 30, 0)
+    # for month2 in [3, 6, 9, 12]:
+    #     for day in range(1, 31):
+    #         for hour in [0, 6, 12, 18]:
+    #             basic_data_reader(f'./data/Weather_Data_Filtered/{type_data}/2019/{type_data}_{2019}_{month2}_{day}_{hour}.npy', type_data, 30, 0)
+
+    npy_to_df(2019)
     pass
