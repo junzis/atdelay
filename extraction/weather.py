@@ -1,3 +1,4 @@
+from mmap import mmap
 import os
 import sys
 import numpy as np
@@ -10,13 +11,12 @@ import bluesky as bs
 import requests
 from tqdm import tqdm
 
-def basic_data_reader(fileloc: str, data: str):
-    ds = xr.open_dataset(fileloc, engine='cfgrib', backend_kwargs={'filter_by_keys': {'typeOfLevel': 'surface'}}, decode_coords= True)
-    weather_data = ds.variables[data].data
-
-    day_counter = 0
+def basic_data_reader(fileloc: str, data: str, max_scale: float = None, min_scale: float = None):
     plt.ion()
     if fileloc == './data/Schiphol_Weather_Data.grib':
+        ds = xr.open_dataset(fileloc, engine='cfgrib', backend_kwargs={'filter_by_keys': {'typeOfLevel': 'surface'}}, decode_coords= True)
+        weather_data = ds.variables[data].data
+        day_counter = 0
         for day in weather_data:
             day_counter += 1
             hour_counter = -1
@@ -28,9 +28,11 @@ def basic_data_reader(fileloc: str, data: str):
                 plt.pause(0.0001)
                 plt.clf()
     else:
-        print(weather_data)
-        print(weather_data.shape)
-        plt.imshow(weather_data, cmap='rainbow', interpolation='nearest')
+        try:
+            weather_data = np.loadtxt(fileloc)
+        except OSError:
+            return 0
+        plt.imshow(weather_data, cmap='rainbow', interpolation='nearest', vmax = max_scale, vmin = min_scale)
         plt.title(fileloc)
         plt.draw()
         plt.pause(0.1)
@@ -103,24 +105,16 @@ def fetch_grb(year, month, day, hour, pred=0, plot_data : bool = False):
     
 
 if __name__ == "__main__":
-    for month in [3, 6, 9, 12]:
-        for day in range(1, 31):
-            for hour in [0, 6, 12, 18]:
-                fetch_grb(2019, month, day, hour)
+    # for month in [3, 6, 9, 12]:
+    #     for day in range(1, 31):
+    #         for hour in [0, 6, 12, 18]:
+    #             fetch_grb(2019, month, day, hour)
 
     # basic_data_reader('./data/Schiphol_Weather_Data.grib')
 
-    # for day in range(1, 10):
-    #     for hour in [0, 6, 12, 18]:
-    #         print('hour = ', hour)
-    #         if hour == 6 or hour == 0:
-    #             if day < 10:
-    #                 basic_data_reader(f'./data/grib/gfsanl_3_2019060{day}_0{hour}00_000.grb2', 'gust')
-    #             else:
-    #                 basic_data_reader(f'./data/grib/gfsanl_3_201906{day}_0{hour}00_000.grb2', 'gust')
-    #         else:
-    #             if day < 10:
-    #                 basic_data_reader(f'./data/grib/gfsanl_3_2019060{day}_{hour}00_000.grb2', 'gust')
-    #             else:
-    #                 basic_data_reader(f'./data/grib/gfsanl_3_201906{day}_{hour}00_000.grb2', 'gust')
+    type_data = 'gust'
+    for month2 in [3, 6, 9, 12]:
+        for day in range(1, 31):
+            for hour in [0, 6, 12, 18]:
+                basic_data_reader(f'./data/Weather_Data_Filtered/{type_data}/2019/{type_data}_{2019}_{month2}_{day}_{hour}.npy', type_data, 30, 0)
     pass
