@@ -1,15 +1,13 @@
-from mmap import mmap
+from datetime import datetime
 import os
 import sys
 import numpy as np
 import pandas as pd
-import cfgrib
-from cfgrib import xarray_to_grib
 import xarray as xr
 import matplotlib.pyplot as plt
-import bluesky as bs
 import requests
 from tqdm import tqdm
+from airportvalues import airport_dict
 
 def basic_data_reader(fileloc: str, data: str, max_scale: float = None, min_scale: float = None):
     plt.ion()
@@ -102,21 +100,36 @@ def fetch_grb(year, month, day, hour, pred=0, plot_data : bool = False):
         print('File already exists!')
     
 def npy_to_df(year: int = 2019):
-    Airport_loc = {'EHAM' : [52.30806, 4.76417]}
-    for airport in Airport_loc:
-        long = int(Airport_loc[airport][0])
-        lat = int(Airport_loc[airport][1])
-        df = pd.DataFrame(columns= ['vis', 'gust', 't', 'cpofp', 'lftx', 'cape'])
-        print(df)
-        print('doing variable = ', variable)
+    for airport in airport_dict:
+        long = int(airport_dict[airport]['longitude'])
+        lat = int(airport_dict[airport]['latitude'])
+        print('Working on airport', airport)
+        airport_data = {'time': [], 'vis': [], 'gust': [], 't': [], 'cpofp': [], 'lftx': [], 'cape': []}
+        previous_rounded_hour = -1
+        error = False
         for month in [3, 6, 9, 12]:
             for day in range(1, 31):
-                for hour in [0, 6, 12, 18]:
-                    for variable in ['vis', 'gust', 't', 'cpofp', 'lftx', 'cape']:
-                        weather_array = np.loadtxt(f'./data/Weather_Data_Filtered/{variable}/{year}/{variable}_{year}_{month}_{day}_{hour}.npy')
-                        df.append()
-    pass
-    
+                for hour in range(0, 24):
+                    for minute in [0, 15, 30, 45]:
+                        airport_data['time'].append(datetime(year, month, day, hour, minute))
+                        for variable in ['vis', 'gust', 't', 'cpofp', 'lftx', 'cape']:
+                            hour_rounded = int(6 * round(hour/6))
+                            if hour_rounded != previous_rounded_hour:
+                                try:
+                                    weather_array = np.loadtxt(f'./data/Weather_Data_Filtered/{variable}/{year}/{variable}_{year}_{month}_{day}_{hour_rounded}.npy')
+                                except OSError:
+                                    airport_data[variable].append(np.NaN)
+                                    error = True
+                            if not error:
+                                airport_data[variable].append(weather_array[69 - lat, long + 9])
+                            previous_rounded_hour = hour_rounded
+
+        print(airport_data)
+        df = pd.DataFrame(airport_data, index=range(len(airport_data['time'])))
+        print(df)
+
+        pd.DataFrame((df)).to_csv(f"./data/Weather_Data_Filtered/Airports/{airport}.csv", header=True, index=False)
+        break    
 
 if __name__ == "__main__":
     # for month in [3, 6, 9, 12]:
@@ -126,11 +139,11 @@ if __name__ == "__main__":
 
     # basic_data_reader('./data/Schiphol_Weather_Data.grib')
 
-    type_data = 'gust'
+    # type_data = 't'
     # for month2 in [3, 6, 9, 12]:
     #     for day in range(1, 31):
     #         for hour in [0, 6, 12, 18]:
-    #             basic_data_reader(f'./data/Weather_Data_Filtered/{type_data}/2019/{type_data}_{2019}_{month2}_{day}_{hour}.npy', type_data, 30, 0)
+    #             basic_data_reader(f'./data/Weather_Data_Filtered/{type_data}/2019/{type_data}_{2019}_{month2}_{day}_{hour}.npy', type_data, 50 +273.15, -20 + 273.15)
 
     npy_to_df(2019)
     pass
