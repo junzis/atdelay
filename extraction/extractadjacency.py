@@ -1,5 +1,6 @@
 from .extract import *
 from .extractionvalues import *
+
 # from .airportvalues import *
 from extraction.extractionvalues import ICAOTOP50
 from . import extract
@@ -9,8 +10,13 @@ import pandas as pd
 
 from regressionModels.tool_box import haversine
 
+
 def getAdjacencyMatrix(
-    airports, start=datetime(2018, 3, 1), end=datetime(2019, 12, 31), timeslotLength=60, debug=False
+    airports,
+    start=datetime(2018, 3, 1),
+    end=datetime(2019, 12, 31),
+    timeslotLength=60,
+    debug=False,
 ):
 
     # Create a list with all times for multiindex later:
@@ -21,7 +27,6 @@ def getAdjacencyMatrix(
             start_date += delta
 
     dateList = daterange(start, end)
-
 
     P = pd.DataFrame()  # start an empty df
     for airport in airports:
@@ -59,9 +64,7 @@ def getAdjacencyMatrix(
     )
 
     # generate multindex format we want: an adjacency matrix
-    adjacencyFormat = pd.MultiIndex.from_product(
-        [dateList, airports]
-    )
+    adjacencyFormat = pd.MultiIndex.from_product([dateList, airports])
 
     # apply the multindex format and sort the columns by airports list
     P = P.reindex(adjacencyFormat, fill_value=0)[airports]
@@ -69,14 +72,17 @@ def getAdjacencyMatrix(
     # Generate numpy adjacency matrix in 3d format
     A = P.to_numpy().reshape(-1, 10, 10)
 
+    maximum = np.amax(A, axis=0)
+    final_matrix = np.divide(A, maximum)
+    np.nan_to_num(final_matrix, copy=False)
+
     if debug:
         print(airports)
         print(P.head(10))
-        print(A[0])
-        print(A.shape)
+        print(final_matrix[0])
+        print(final_matrix.shape)
 
-    return A
-
+    return final_matrix
 
 
 def getAdjacencyMatrixOld(airports, timeslotLength=60):
@@ -146,13 +152,18 @@ def distance_weight_adjacency(airports, threshold=1000):
     threshold = 1000
     for i, airport1 in enumerate(airports):
         for j, airport2 in enumerate(airports):
-            coords1 = (airport_dict[airport1]['longitude'], airport_dict[airport1]['latitude'])
-            coords2 = (airport_dict[airport2]['longitude'], airport_dict[airport2]['latitude'])
+            coords1 = (
+                airport_dict[airport1]["longitude"],
+                airport_dict[airport1]["latitude"],
+            )
+            coords2 = (
+                airport_dict[airport2]["longitude"],
+                airport_dict[airport2]["latitude"],
+            )
             D[i, j] = haversine(coords1, coords2)
 
-    
     st_dev = np.std(D)
-    D = np.where(D < threshold, np.exp(-D**2/st_dev**2), 0) 
+    D = np.where(D < threshold, np.exp(-(D ** 2) / st_dev ** 2), 0)
 
     diag_filter = np.ones((len(airports), len(airports)))
     np.fill_diagonal(diag_filter, 0)
