@@ -4,6 +4,8 @@ import networkx as nx
 import matplotlib.pyplot as plt
 import scipy.sparse as sp
 import tensorflow as tf
+import networkx as nx
+
 from tensorflow.keras.layers import Dense
 from tensorflow.keras.losses import CategoricalCrossentropy
 from tensorflow.keras.metrics import categorical_accuracy
@@ -17,7 +19,6 @@ from spektral.transforms.normalize_adj import NormalizeAdj
 
 from . import generateNNdataMultiple
 from . import getAdjacencyMatrix
-import networkx as nx
 from . import airport_dict
 
 
