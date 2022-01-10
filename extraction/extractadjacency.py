@@ -3,15 +3,26 @@ from .extractionvalues import *
 # from .airportvalues import *
 from extraction.extractionvalues import ICAOTOP50
 from . import extract
-from datetime import datetime
+from datetime import datetime, timedelta
 import numpy as np
 import pandas as pd
 
 from regressionModels.tool_box import haversine
 
 def getAdjacencyMatrix(
-    airports, start=datetime(2018, 3, 1), end=datetime(2018, 3, 31), timeslotLength=60, debug=False
+    airports, start=datetime(2018, 3, 1), end=datetime(2019, 12, 31), timeslotLength=60, debug=False
 ):
+
+    # Create a list with all times for multiindex later:
+    def daterange(start_date, end_date):
+        delta = timedelta(minutes=timeslotLength)
+        while start_date < end_date:
+            yield start_date
+            start_date += delta
+
+    dateList = daterange(start, end)
+
+
     P = pd.DataFrame()  # start an empty df
     for airport in airports:
         # generate filtered data
@@ -49,7 +60,7 @@ def getAdjacencyMatrix(
 
     # generate multindex format we want: an adjacency matrix
     adjacencyFormat = pd.MultiIndex.from_product(
-        [P.index.get_level_values("FiledAT").unique(), airports]
+        [dateList, airports]
     )
 
     # apply the multindex format and sort the columns by airports list
