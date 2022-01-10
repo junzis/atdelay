@@ -1,5 +1,5 @@
-# from .extract import *
-# from .extractionvalues import *
+from .extract import *
+from .extractionvalues import *
 # from .airportvalues import *
 from extraction.extractionvalues import ICAOTOP50
 from . import extract
@@ -7,6 +7,7 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 
+from regressionModels.tool_box import haversine
 
 def getAdjacencyMatrix(
     airports, start=datetime(2018, 3, 1), end=datetime(2018, 3, 31), timeslotLength=60, debug=False
@@ -129,3 +130,17 @@ def getAdjacencyMatrixOld(airports, timeslotLength=60):
     return adj_matrices_demand
 
 
+def distance_weight_adjacency(airports, threshold=1000):
+    D = np.zeros((len(airports), len(airports)))
+    threshold = 1000
+    for i, airport1 in enumerate(airports):
+        for j, airport2 in enumerate(airports):
+            coords1 = (airport_dict[airport1]['longitude'], airport_dict[airport1]['latitude'])
+            coords2 = (airport_dict[airport2]['longitude'], airport_dict[airport2]['latitude'])
+            D[i, j] = haversine(coords1, coords2)
+
+    
+    st_dev = np.std(D)
+    D = np.where(D < threshold, np.exp(-D**2/st_dev**2), 0) 
+    
+    return D
