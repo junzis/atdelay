@@ -83,5 +83,7 @@ def distance_weight_adjacency(airports, threshold=1000):
     
     st_dev = np.std(D)
     D = np.where(D < threshold, np.exp(-D**2/st_dev**2), 0) 
-    
-    return D
+
+    diag_filter = np.ones((len(airports), len(airports)))
+    np.fill_diagonal(diag_filter, 0)
+    return D * diag_filter
