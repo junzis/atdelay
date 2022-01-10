@@ -16,12 +16,15 @@ from spektral.layers.pooling import TopKPool
 from spektral.transforms.normalize_adj import NormalizeAdj
 
 from . import generateNNdataMultiple
+from . import getAdjacencyMatrix
+import networkx as nx
+from . import airport_dict
 
 
 class TrafficDataset(Dataset):
     def __init__(self, airports, timeslotLength, days=10,**kwargs):
         self.timeslotLength = timeslotLength
-        self.airports = airports
+        self.airports = sorted(airports)
         self.n_airports = len(airports)
         self._maxIndex = int((60/timeslotLength) * 24 * days)
 
@@ -29,6 +32,7 @@ class TrafficDataset(Dataset):
 
     def read(self):
         dataDict = generateNNdataMultiple(self.airports, self.timeslotLength, GNNFormat=True)
+        adjacencies = getAdjacencyMatrix(self.airports)
         # print(list(dataDict.values()))
         n_features = len(list(dataDict.values())[0]["X"].columns)
         n_labels = len(list(dataDict.values())[0]["Y"].columns) # 2
@@ -39,8 +43,11 @@ class TrafficDataset(Dataset):
             Y = np.zeros((self.n_airports, n_labels))
 
             # fully connected graph for now
-            A = np.ones((self.n_airports, self.n_airports)) - np.identity(self.n_airports)
-            # print(A)
+            # A = np.ones((self.n_airports, self.n_airports)) - np.identity(self.n_airports)
+            A = adjacencies[timeIndex]
+            print(A)
+            print(A.shape)
+
 
             for AirportIndex, airport in enumerate(self.airports):
                 X[AirportIndex] = dataDict[airport]["X"].iloc[timeIndex,:].to_numpy()
@@ -56,12 +63,18 @@ class TrafficDataset(Dataset):
         return final
 
 
-    # def read(self):
+    def visualiseGraph(self, nthGraph=0):
+        graph = self[nthGraph]
+        adj = graph.a
+        G = nx.convert_matrix.from_numpy_array(adj)
+        labels = {}
+        pos = {}
+        for idx, airport in enumerate(self.airports):
+            G.nodes[idx]['name'] = airport , round(graph.y[idx][0],2) , round(graph.y[idx][1],2)
+            pos[idx] = [airport_dict[airport]["latitude"],  airport_dict[airport]["longitude"]]
+            labels[idx]= airport
 
-# def visualiseGraph(graph):
-#     adj = graph.a
-#     G = nx.convert_matrix.from_numpy_array(adj)
-#     print(G.number_of_nodes())
-#     subax1 = plt.subplot(121)
-#     nx.draw(G, with_labels=True, font_weight='bold')
-#     plt.show()  
+        nx.draw(G, pos)
+        node_labels = nx.get_node_attributes(G,'name')
+        nx.draw_networkx_labels(G, pos, labels = node_labels)
+        plt.show()

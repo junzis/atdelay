@@ -471,7 +471,7 @@ def show_heatmap(P: pd.DataFrame, dtkey: str = None):
         P = P.drop([dtkey], axis=1)
 
     plt.matshow(P.corr(), cmap="RdBu_r", vmin=-1, vmax=1)
-    plt.xticks(range(P.shape[1]), P.columns, fontsize=14, rotation=90)
+    plt.xticks(range(P.shape[1]), P.columns, fontsize=12, rotation=-30)
     plt.gca().xaxis.tick_bottom()
     plt.yticks(range(P.shape[1]), P.columns, fontsize=14)
 
