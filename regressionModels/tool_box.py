@@ -148,18 +148,22 @@ def time_distance(P: pd.DataFrame):
     return P
 
 
-def haversine(P: pd.DataFrame):
+def haversine(*P: pd.DataFrame):
     """Calculates the great-circle distance between two decimal
     coordinates using the Haversine formula and applies it to a dataframe.
     The formula was found on https://en.wikipedia.org/wiki/Haversine_formula
 
     Args:
-        P (pd.DataFrame): Dataframe of LRData
+        P (pd.DataFrame): Dataframe of LRData or two coordinate tuples
 
     Returns:
         pd.DataFrame: Dataframe of LRData with extra column 'distance'
     """
-    coords_a, coords_b = (P["ADEPLong"], P["ADEPLat"]), (P["ADESLong"], P["ADESLat"])
+    if isinstance(P, pd.DataFrame):
+        coords_a, coords_b = (P["ADEPLong"], P["ADEPLat"]), (P["ADESLong"], P["ADESLat"])
+    else:
+        (coords_a, coords_b) = P
+    
     # Conversion to radians is necessary for the trigonometric functions
     phi_1, phi_2 = radians(coords_a[1]), radians(coords_b[1])
     lambda_1, lambda_2 = radians(coords_a[0]), radians(coords_b[0])

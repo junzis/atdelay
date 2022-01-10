@@ -15,6 +15,8 @@ from spektral.layers import GCSConv, GlobalAvgPool
 from spektral.layers.pooling import TopKPool
 from spektral.transforms.normalize_adj import NormalizeAdj
 
+from extraction.extractadjacency import distance_weight_adjacency
+
 from . import generateNNdataMultiple
 from . import getAdjacencyMatrix
 import networkx as nx
@@ -22,6 +24,9 @@ from . import airport_dict
 
 
 class TrafficDataset(Dataset):
+    WEIGHT = 0.4
+    THRESHOLD = 1000
+    
     def __init__(self, airports, timeslotLength, days=10,**kwargs):
         self.timeslotLength = timeslotLength
         self.airports = sorted(airports)
@@ -32,7 +37,9 @@ class TrafficDataset(Dataset):
 
     def read(self):
         dataDict = generateNNdataMultiple(self.airports, self.timeslotLength, GNNFormat=True)
-        adjacencies = getAdjacencyMatrix(self.airports)
+        flight_adjacency = getAdjacencyMatrix(self.airports)
+        distance_adjacency = distance_weight_adjacency(self.airports, threshold=self.THRESHOLD)
+        adjacencies = self.WEIGHT * distance_adjacency + (1 - self.WEIGHT) * flight_adjacency
         # print(list(dataDict.values()))
         n_features = len(list(dataDict.values())[0]["X"].columns)
         n_labels = len(list(dataDict.values())[0]["Y"].columns) # 2
