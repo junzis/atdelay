@@ -105,31 +105,25 @@ def npy_to_df(year: int = 2019):
         lat = int(airport_dict[airport]['latitude'])
         print('Working on airport', airport)
         airport_data = {'time': [], 'vis': [], 'gust': [], 't': [], 'cpofp': [], 'lftx': [], 'cape': []}
-        previous_rounded_hour = -1
-        error = False
         for month in [3, 6, 9, 12]:
             for day in range(1, 31):
                 for hour in range(0, 24):
                     for minute in [0, 15, 30, 45]:
                         airport_data['time'].append(datetime(year, month, day, hour, minute))
                         for variable in ['vis', 'gust', 't', 'cpofp', 'lftx', 'cape']:
-                            hour_rounded = int(6 * round(hour/6))
-                            if hour_rounded != previous_rounded_hour:
+                            if hour in [0, 6, 12, 18] and minute == 0:
                                 try:
-                                    weather_array = np.loadtxt(f'./data/Weather_Data_Filtered/{variable}/{year}/{variable}_{year}_{month}_{day}_{hour_rounded}.npy')
+                                    weather_array = np.loadtxt(f'./data/Weather_Data_Filtered/{variable}/{year}/{variable}_{year}_{month}_{day}_{hour}.npy')
+                                    airport_data[variable].append(weather_array[69 - lat, long + 9])
                                 except OSError:
                                     airport_data[variable].append(np.NaN)
-                                    error = True
-                            if not error:
-                                airport_data[variable].append(weather_array[69 - lat, long + 9])
-                            previous_rounded_hour = hour_rounded
+                            else:
+                                airport_data[variable].append(np.NaN)
+        df = pd.DataFrame(airport_data)
+        for variable in ['vis', 'gust', 't', 'cpofp', 'lftx', 'cape']:
+            df[[variable]] = df[[variable]].interpolate()
 
-        print(airport_data)
-        df = pd.DataFrame(airport_data, index=range(len(airport_data['time'])))
-        print(df)
-
-        pd.DataFrame((df)).to_csv(f"./data/Weather_Data_Filtered/Airports/{airport}.csv", header=True, index=False)
-        break    
+        pd.DataFrame((df)).to_csv(f"./data/Weather_Data_Filtered/Airports/{airport}_{year}.csv", header=True, index=False)
 
 if __name__ == "__main__":
     # for month in [3, 6, 9, 12]:
