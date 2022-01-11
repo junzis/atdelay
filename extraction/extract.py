@@ -8,6 +8,7 @@ from extraction.extractionvalues import *
 from extraction.airportvalues import *
 
 
+
 def extractData(
     start: datetime = None,
     end: datetime = None,
@@ -111,9 +112,11 @@ def calculateDelays(P: pd.DataFrame, delayTypes: list = ["arrival", "departure"]
         P = P.assign(
             DepartureDelay=lambda x: (x.ActualOBT - x.FiledOBT).astype("timedelta64[m]")
         )
+
     P = P.query(
         "ArrivalDelay < 90 & ArrivalDelay > -30 & DepartureDelay < 90 & DepartureDelay > -30 "
     )
+    
     return P
 
 
@@ -128,7 +131,7 @@ def filterAirports(P: pd.DataFrame, airports: list):
         pd.DataFrame: filtered flights dataframe
     """
 
-    P = P.query("`ADEP` in @airports & `ADES` in @airports")
+    P = P.query("`ADEP` in @airports | `ADES` in @airports")
     return P
 
 
@@ -196,19 +199,20 @@ def readLRDATA(saveFolder: str = "LRData", fileName: str = "LRDATA.csv"):
     P = pd.read_csv(fullfilename, header=0, index_col=0)
     return P
 
-
 def generalFilterAirport(
     start: datetime,
     end: datetime,
     airport: str,
     saveFolder: str = "filteredData",
     forceRegenerateData: bool = False,
+    startDefault=datetime(2018, 1, 1),
+    endDefault=datetime(2019, 12, 31),
 ):
     """Generate all the flights for a single airport, save and return as dataframe
 
     Args:
-        start (datetime): start date to filter for
-        end (datetime): end date to filter for
+        start (datetime): start date to filter for. Dates are inclusive.
+        end (datetime): end date to filter for. Dates are inclusive.
         airport (str): ICAO code for the airport
         saveFolder (str, optional): target save folder. Defaults to "filteredData".
 
@@ -220,9 +224,10 @@ def generalFilterAirport(
     if not os.path.exists(saveFolder):
         os.makedirs(saveFolder)
 
+    # For the first cold run it generates data for all dates to prevent problems
     if not os.path.exists(file) or forceRegenerateData:
-        print(f"Generating {airport} airport data from {start} to {end}")
-        P = extractData(start, end)
+        print(f"Generating {airport} airport data from {startDefault} to {endDefault}")
+        P = extractData(startDefault, endDefault)
         P = P.query("`ADES` == @airport | `ADEP` == @airport")
         P = calculateDelays(P)
         P.to_csv(file)
@@ -235,6 +240,10 @@ def generalFilterAirport(
             .assign(ActualOBT=lambda x: pd.to_datetime(x.ActualOBT, format=dform))
             .assign(ActualAT=lambda x: pd.to_datetime(x.ActualAT, format=dform))
         )
+
+    # Actual date filter.
+    # Does NOT include flights that departed the night before but arrived within the filter
+    P = P.query("`FiledOBT` >= @start & `FiledAT` <= @end")
 
     return P
 
@@ -493,3 +502,4 @@ def show_raw_visualization(P: pd.DataFrame, date_time_key="timeslot"):
 
 if __name__ == "__main__":
     pass
+
