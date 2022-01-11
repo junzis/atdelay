@@ -216,8 +216,8 @@ def generalFilterAirport(
         airport (str): ICAO code for the airport
         saveFolder (str, optional): target save folder. Defaults to "filteredData".
         forceRegenerateData (bool, optional): force regeneration of data even if it had already been generated. Defaults to False.
-        startDefault (datetime, optinoal): start date for the cvs
-        endDefault (datetime, optinoal): end date for the cvs
+        startDefault (datetime, optinoal): start date for the csv
+        endDefault (datetime, optinoal): end date for the csv
 
     Returns:
         pd.DataFrame: Dataframe with all flights for selected filters
@@ -273,8 +273,8 @@ def generateNNdata(
         forceRegenerateData (bool, optional): force regeneration of data even if it had already been generated. Defaults to False.
         start (datetime, optional): start date to filter for
         end (datetime, optional): end date to filter for
-        startDefault (datetime, optinoal): start date for the cvs
-        endDefault (datetime, optinoal): end date for the cvs
+        startDefault (datetime, optinoal): start date for the csv
+        endDefault (datetime, optinoal): end date for the csv
     Returns:
         pd.Dataframe: pandas dataframe with aggregate flight data, unscaled.
     """
