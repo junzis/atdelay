@@ -1,7 +1,7 @@
 import pandas as pd
 import os
 from glob import glob
-from datetime import datetime
+from datetime import datetime, timedelta
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 from extraction.extractionvalues import *
@@ -326,7 +326,13 @@ def generateNNdata(
         P.loc[(P.arriving == True), "timeAtAirport"] = P.FiledAT
         P.loc[(P.arriving == False), "timeAtAirport"] = P.FiledOBT
 
-        # P = P.fillna(0)
+        # This creates a new index to ensure that we have no gaps in the timeslots later
+        def daterange(start_date, end_date):
+            delta = timedelta(minutes=timeslotLength)
+            while start_date < end_date:
+                yield start_date
+                start_date += delta
+        denseDateIndex = daterange(start, end)
 
         ### get aggregate features for rolling window
         Pagg = (
@@ -354,6 +360,10 @@ def generateNNdata(
                     "arrivalsFlightDuration6orMore": "mean",
                 }
             )
+            # This ensure that there are no timeslot gaps
+            # at the start and end of the dataframe
+            .reindex(denseDateIndex, fill_value=0)
+            # Engineering some features
             .assign(planes=lambda x: x.arriving - x.departing)
             .assign(runways=lambda x: numRunways)
             .assign(gates=lambda x: numGates)
@@ -382,7 +392,7 @@ def generateNNdata(
 
         # there are two ways the team wanted the flight
         # duration in bins of 3 hours or as an average,
-        #  here the data gets augmented based on the chase
+        # here the data gets augmented based on the chase
         if catagoricalFlightDuration:
             Pagg = Pagg.drop(
                 ["departuresFlightDuration", "arrivalsFlightDuration"], axis=1
@@ -406,6 +416,7 @@ def generateNNdata(
         Pagg = pd.read_csv(filename, header=0, index_col=0)
         Pagg = Pagg.assign(timeslot=lambda x: pd.to_datetime(x.timeslot, format=dform))
 
+    # Additional formatting
     if GNNFormat and catagoricalFlightDuration:
         raise ValueError("GNNFormat and catagoricalFlightDuration are not compatible")
 
@@ -417,7 +428,7 @@ def generateNNdata(
                 "arrivalsArrivalDelay",
                 "departuresDepartureDelay",
                 "departuresArrivalDelay",
-                "timeslot"
+                "timeslot",
             ],
             axis=1,
         )
