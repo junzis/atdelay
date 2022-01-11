@@ -68,7 +68,6 @@ def getAdjacencyMatrix(
 
     # apply the multindex format and sort the columns by airports list
     P = P.reindex(adjacencyFormat, fill_value=0)[airports]
-
     # Generate numpy adjacency matrix in 3d format
     A = P.to_numpy().reshape(-1, 10, 10)
 
@@ -77,74 +76,15 @@ def getAdjacencyMatrix(
     np.nan_to_num(final_matrix, copy=False)
 
     if debug:
+        dp = 7
         print(airports)
-        print(P.head(10))
-        print(final_matrix[0])
+        print(P.iloc[int(dp*10):int(dp*10)+10])
+        print(P.index.get_level_values(0).unique()[dp])
+        print(final_matrix[dp])
         print(final_matrix.shape)
 
+
     return final_matrix
-
-
-def getAdjacencyMatrixOld(airports, timeslotLength=60):
-    raise (DeprecationWarning("this version of get adjacency matrix is outdated"))
-    P = extract.extractData(start=datetime(2018, 3, 1), end=datetime(2018, 3, 31))
-    P = extract.filterAirports(P, airports)
-    P = extract.calculateDelays(P)
-    P = P.drop(
-        [
-            "ACType",
-            "ACOperator",
-            "FlightType",
-            "ActualDistanceFlown",
-            "ECTRLID",
-            "ADEPLat",
-            "ADEPLong",
-            "ADESLat",
-            "ADESLong",
-            "ActualOBT",
-            "ActualAT",
-            "ArrivalDelay",
-            "DepartureDelay",
-        ],
-        axis=1,
-    )
-    P.sort_values("FiledOBT")
-    arr = (
-        P.groupby([pd.Grouper(key="FiledAT", freq=f"{timeslotLength}min"), "ADES"])[
-            "ADEP"
-        ]
-        .value_counts()
-        .unstack(fill_value=0)
-    )
-
-    mux = pd.MultiIndex.from_product(
-        [
-            arr.index.get_level_values("FiledAT").unique(),
-            arr.index.get_level_values("ADES").unique(),
-        ]
-    )
-    df = arr.reindex(mux)
-
-    a = (
-        df.sort_index(level=0, ascending=True)
-        .reindex(sorted(df.columns), axis=1)
-        .fillna(0)
-        .to_numpy()
-    )
-
-    maximum = np.zeros((10, 10))
-
-    b = [a[i : i + 10] for i in range(0, len(a), 10)]
-
-    ### fix later division by 0 results in nans
-    # b = np.array(b)
-    # for i in range(len(a[0])):
-    #     for j in range(len(a[0])):
-    #         maximum[i][j] = max(b[:, i, j])
-    # adj_matrices_demand = np.array([x / maximum for x in b])
-    print(np.array(b).shape)
-    return b
-    return adj_matrices_demand
 
 
 def distance_weight_adjacency(airports, threshold=1000):
