@@ -215,6 +215,9 @@ def generalFilterAirport(
         end (datetime): end date to filter for. Dates are inclusive.
         airport (str): ICAO code for the airport
         saveFolder (str, optional): target save folder. Defaults to "filteredData".
+        forceRegenerateData (bool, optional): force regeneration of data even if it had already been generated. Defaults to False. 
+        startDefault (datetime, optinoal): start date for the cvs
+        endDefault (datetime, optinoal): end date for the cvs
 
     Returns:
         pd.DataFrame: Dataframe with all flights for selected filters
