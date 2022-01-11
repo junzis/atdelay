@@ -8,7 +8,6 @@ from extraction.extractionvalues import *
 from extraction.airportvalues import *
 
 
-
 def extractData(
     start: datetime = None,
     end: datetime = None,
@@ -116,7 +115,7 @@ def calculateDelays(P: pd.DataFrame, delayTypes: list = ["arrival", "departure"]
     P = P.query(
         "ArrivalDelay < 90 & ArrivalDelay > -30 & DepartureDelay < 90 & DepartureDelay > -30 "
     )
-    
+
     return P
 
 
@@ -199,6 +198,7 @@ def readLRDATA(saveFolder: str = "LRData", fileName: str = "LRDATA.csv"):
     P = pd.read_csv(fullfilename, header=0, index_col=0)
     return P
 
+
 def generalFilterAirport(
     start: datetime,
     end: datetime,
@@ -215,7 +215,7 @@ def generalFilterAirport(
         end (datetime): end date to filter for. Dates are inclusive.
         airport (str): ICAO code for the airport
         saveFolder (str, optional): target save folder. Defaults to "filteredData".
-        forceRegenerateData (bool, optional): force regeneration of data even if it had already been generated. Defaults to False. 
+        forceRegenerateData (bool, optional): force regeneration of data even if it had already been generated. Defaults to False.
         startDefault (datetime, optinoal): start date for the cvs
         endDefault (datetime, optinoal): end date for the cvs
 
@@ -259,6 +259,8 @@ def generateNNdata(
     forceRegenerateData: bool = False,
     start: datetime = datetime(2018, 1, 1),
     end: datetime = datetime(2019, 12, 31),
+    startDefault=datetime(2018, 1, 1),
+    endDefault=datetime(2019, 12, 31),
 ):
     """Aggregates all flights at a single airport by a certain timeslot.
 
@@ -271,6 +273,8 @@ def generateNNdata(
         forceRegenerateData (bool, optional): force regeneration of data even if it had already been generated. Defaults to False.
         start (datetime, optional): start date to filter for
         end (datetime, optional): end date to filter for
+        startDefault (datetime, optinoal): start date for the cvs
+        endDefault (datetime, optinoal): end date for the cvs
     Returns:
         pd.Dataframe: pandas dataframe with aggregate flight data, unscaled.
     """
@@ -284,7 +288,7 @@ def generateNNdata(
         print(
             f"Generating NN data for {airport} with a timeslot length of {timeslotLength} minutes"
         )
-        P = generalFilterAirport(start, end, airport)
+        P = generalFilterAirport(startDefault, endDefault, airport)
 
         # Temporary untill weather is added:
         numRunways = 0
@@ -410,6 +414,8 @@ def generateNNdata(
         Pagg = pd.read_csv(filename, header=0, index_col=0)
         Pagg = Pagg.assign(timeslot=lambda x: pd.to_datetime(x.timeslot, format=dform))
 
+    Pagg = Pagg.query("`timeslot` >= @start & `timeslot` <= @end")
+
     return Pagg
 
 
@@ -505,4 +511,3 @@ def show_raw_visualization(P: pd.DataFrame, date_time_key="timeslot"):
 
 if __name__ == "__main__":
     pass
-
