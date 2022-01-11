@@ -2,6 +2,7 @@ from re import L
 import pandas as pd
 from seaborn.rcmod import axes_style
 from extraction.airportvalues import *
+from extraction.extractionvalues import * 
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import KFold, GridSearchCV
 from sklearn.metrics import get_scorer
@@ -93,6 +94,7 @@ def capacity_calc(P: pd.DataFrame, airport: str = "EGLL", airport_capacity: int 
     Returns:
         pd.DataFrame: dataframe with capacity of airport at time of flight 
     """
+    airportlist = ICAOTOP50
     dform = "%Y-%m-%d %H:%M:%S"
     P = P.assign(FiledOBT=lambda x: pd.to_datetime(x.FiledOBT, format=dform))
 
@@ -124,7 +126,7 @@ def capacity_calc(P: pd.DataFrame, airport: str = "EGLL", airport_capacity: int 
     new_df["capacity"] = new_df["Time_tuple"].map(cap_dict) / airport_capacity / 4
     new_df = new_df.drop(
         ["Time_tuple", "Date", "Hour", "Minutes", "Time"], axis=1
-    ).query("ADES == @airport")
+    ).query("ADES == @airport & ADEP in @airportlist")
     new_df = new_df.sort_values("FiledAT")
 
     return new_df
