@@ -8,6 +8,7 @@ from extraction.extractionvalues import *
 from extraction.airportvalues import *
 
 
+
 def extractData(
     start: datetime = None,
     end: datetime = None,
@@ -111,9 +112,11 @@ def calculateDelays(P: pd.DataFrame, delayTypes: list = ["arrival", "departure"]
         P = P.assign(
             DepartureDelay=lambda x: (x.ActualOBT - x.FiledOBT).astype("timedelta64[m]")
         )
+
     P = P.query(
         "ArrivalDelay < 90 & ArrivalDelay > -30 & DepartureDelay < 90 & DepartureDelay > -30 "
     )
+    
     return P
 
 
@@ -128,7 +131,7 @@ def filterAirports(P: pd.DataFrame, airports: list):
         pd.DataFrame: filtered flights dataframe
     """
 
-    P = P.query("`ADEP` in @airports & `ADES` in @airports")
+    P = P.query("`ADEP` in @airports | `ADES` in @airports")
     return P
 
 
@@ -195,7 +198,6 @@ def readLRDATA(saveFolder: str = "LRData", fileName: str = "LRDATA.csv"):
     fullfilename = f"{saveFolder}/{fileName}"
     P = pd.read_csv(fullfilename, header=0, index_col=0)
     return P
-
 
 def generalFilterAirport(
     start: datetime,
@@ -500,3 +502,4 @@ def show_raw_visualization(P: pd.DataFrame, date_time_key="timeslot"):
 
 if __name__ == "__main__":
     pass
+
