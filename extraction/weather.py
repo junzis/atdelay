@@ -10,6 +10,17 @@ from tqdm import tqdm
 from airportvalues import airport_dict
 
 def basic_data_reader(fileloc: str, data: str, max_scale: float = None, min_scale: float = None):
+    """Plots the weather data from grib file into an image that 'moves'
+
+    Args:
+        fileloc (str): file location of grib file
+        data (str): which variable should be plotted, such as 'gust'
+        max_scale (float, optional): maximum value for colour scale. Defaults to None.
+        min_scale (float, optional): minimum value for colour scale. Defaults to None.
+
+    Returns:
+        [type]: [description]
+    """
     plt.ion()
     if fileloc == './data/Schiphol_Weather_Data.grib':
         ds = xr.open_dataset(fileloc, engine='cfgrib', backend_kwargs={'filter_by_keys': {'typeOfLevel': 'surface'}}, decode_coords= True)
@@ -37,6 +48,19 @@ def basic_data_reader(fileloc: str, data: str, max_scale: float = None, min_scal
         plt.clf()
 
 def fetch_grb(year, month, day, hour, pred=0, plot_data : bool = False):
+    """grabs weather data from internet and turns it into numpy arrays for each variable and saves them in corresponding folder.
+
+    Args:
+        year (int): year to grab data from
+        month (int): month to grab data from
+        day (int): day to grab data from
+        hour (int): hour to grab data from (only data at 0, 6, 12 and 18)
+        pred (int, optional): Fixed end of url. Only change from 0 if grabbing from different dataset. Defaults to 0.
+        plot_data (bool, optional): Plots each variable after downloading data. Defaults to False.
+
+    Returns:
+        [type]: [description]
+    """
     datadir = './data/grib/'
     if not os.path.exists(datadir):
         print('COULD NOT FIND GRIB FOLDER')
@@ -99,7 +123,29 @@ def fetch_grb(year, month, day, hour, pred=0, plot_data : bool = False):
     else:
         print('File already exists!')
     
-def npy_to_df(year: int = 2019):
+def npy_to_df(year: int, interval: int):
+    """grabs numpy files and saves a df for each airport with interpolated data.
+
+    Args:
+        year (int, optional): year to grab data from.
+        hour_interval (bool, optional): minute intervals to have data points at (should be between 60 - 1).
+    """
+
+    if 0 >= interval >= 61:
+        raise ValueError('Interval value should be between 1 and 60 minutes')
+
+    if not os.path.exists(f'./data/Weather_Data_Filtered/Airports/{interval}_interval/{year}/'):
+        os.makedirs(f'./data/Weather_Data_Filtered/Airports/{interval}_interval/{year}/')
+
+    minute_list = []
+    overloaded = False
+    minute = 0
+    while not overloaded:
+        minute_list.append(minute)
+        minute += interval
+        if minute >= 60:
+            overloaded = True
+    
     for airport in airport_dict:
         long = int(airport_dict[airport]['longitude'])
         lat = int(airport_dict[airport]['latitude'])
@@ -108,7 +154,7 @@ def npy_to_df(year: int = 2019):
         for month in [3, 6, 9, 12]:
             for day in range(1, 31):
                 for hour in range(0, 24):
-                    for minute in [0, 15, 30, 45]:
+                    for minute in minute_list:
                         airport_data['time'].append(datetime(year, month, day, hour, minute))
                         for variable in ['vis', 'gust', 't', 'cpofp', 'lftx', 'cape']:
                             if hour in [0, 6, 12, 18] and minute == 0:
@@ -123,7 +169,8 @@ def npy_to_df(year: int = 2019):
         for variable in ['vis', 'gust', 't', 'cpofp', 'lftx', 'cape']:
             df[[variable]] = df[[variable]].interpolate()
 
-        pd.DataFrame((df)).to_csv(f"./data/Weather_Data_Filtered/Airports/{airport}_{year}.csv", header=True, index=False)
+        pd.DataFrame((df)).to_csv(f"./data/Weather_Data_Filtered/Airports/{interval}_interval/{year}/{airport}_{year}_{interval}.csv", header=True, index=False)
+
 
 if __name__ == "__main__":
     # for month in [3, 6, 9, 12]:
@@ -139,5 +186,5 @@ if __name__ == "__main__":
     #         for hour in [0, 6, 12, 18]:
     #             basic_data_reader(f'./data/Weather_Data_Filtered/{type_data}/2019/{type_data}_{2019}_{month2}_{day}_{hour}.npy', type_data, 50 +273.15, -20 + 273.15)
 
-    npy_to_df(2019)
+    npy_to_df(2019, 15)
     pass
