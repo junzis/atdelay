@@ -73,7 +73,7 @@ def getAdjacencyMatrix(
 
     maximum = np.amax(A, axis=0)
     new_max = np.where(maximum > 0, maximum, 1 )
-    final_matrix = np.divide(A, maximum)
+    final_matrix = np.divide(A, new_max)
 
     if debug:
         dp = 7
