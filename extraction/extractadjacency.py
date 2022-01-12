@@ -12,15 +12,36 @@ from regressionModels.tool_box import haversine
 
 
 def getAdjacencyMatrix(
-    airports,
-    start=datetime(2018, 3, 1),
-    end=datetime(2019, 12, 31),
-    timeslotLength=60,
-    debug=False,
-):
+    airports: list,
+    start: datetime = datetime(2018, 3, 1),
+    end: datetime = datetime(2019, 12, 31),
+    timeslotLength: int = 60,
+    debug: bool = False,
+) -> np.ndarray:
+    """Generate adjacency matrix for the spektral dataset based on flights between airports
 
+    Args:
+        airports (list): list of airports by ICAO code
+        start (datetime, optional): start date to consider (inclusive). Defaults to datetime(2018, 3, 1).
+        end (datetime, optional): start date to consider (inclusive). Defaults to datetime(2019, 12, 31).
+        timeslotLength (int, optional): length of timeslot to aggregate by in minutes. Defaults to 60.
+        debug (bool, optional): print out some lines to troubleshoot the function. Defaults to False.
+
+    Returns:
+        np.ndarry: Nairports x Nairports x amount array of adjacency matrices
+
+    """
     # Create a list with all times for multiindex later:
-    def daterange(start_date, end_date):
+    def daterange(start: datetime, end: datetime):
+        """Generator that yields a list of timeslots to conform the index by
+
+        Args:
+            start (datetime): start date
+            end (datetime): end date
+
+        Yields:
+            list: list of timeslots for index
+        """
         delta = timedelta(minutes=timeslotLength)
         while start_date < end_date:
             yield start_date
