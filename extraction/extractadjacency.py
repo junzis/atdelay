@@ -43,9 +43,9 @@ def getAdjacencyMatrix(
             list: list of timeslots for index
         """
         delta = timedelta(minutes=timeslotLength)
-        while start_date < end_date:
-            yield start_date
-            start_date += delta
+        while start < end:
+            yield start
+            start += delta
 
     dateList = daterange(start, end)
 
@@ -90,8 +90,9 @@ def getAdjacencyMatrix(
     # apply the multindex format and sort the columns by airports list
     P = P.reindex(adjacencyFormat, fill_value=0)[airports]
     # Generate numpy adjacency matrix in 3d format
-    A = P.to_numpy().reshape(-1, 10, 10)
+    A = P.to_numpy().reshape(-1, len(airports), len(airports))
 
+    # Normalise the matrix
     maximum = np.amax(A, axis=0)
     final_matrix = np.divide(A, maximum)
     np.nan_to_num(final_matrix, copy=False)
@@ -99,11 +100,10 @@ def getAdjacencyMatrix(
     if debug:
         dp = 7
         print(airports)
-        print(P.iloc[int(dp*10):int(dp*10)+10])
+        print(P.iloc[int(dp * len(airports)) : int(dp * len(airports)) + len(airports)])
         print(P.index.get_level_values(0).unique()[dp])
         print(final_matrix[dp])
         print(final_matrix.shape)
-
 
     return final_matrix
 
