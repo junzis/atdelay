@@ -66,12 +66,11 @@ class FlightNetworkDataset(Dataset):
         flight_adjacency = getAdjacencyMatrix(
             self.airports, self.start, self.end, timeslotLength=self.timeslotLength
         )
-        norm_adjacency = np.where(flight_adjacency > 0, 1, 0)
         distance_adjacency = distance_weight_adjacency(
             self.airports, threshold=self.THRESHOLD
         )
         adjacencies = (
-            self.WEIGHT * (distance_adjacency * norm_adjacency) + (1 - self.WEIGHT) * flight_adjacency
+            self.WEIGHT * distance_adjacency + (1 - self.WEIGHT) * flight_adjacency
         )
 
         n_features = (list(dataDict.values())[0]["X"]).shape[1]
