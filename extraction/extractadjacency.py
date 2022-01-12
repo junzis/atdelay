@@ -94,8 +94,8 @@ def getAdjacencyMatrix(
 
     # Normalise the matrix
     maximum = np.amax(A, axis=0)
-    final_matrix = np.divide(A, maximum)
-    np.nan_to_num(final_matrix, copy=False)
+    new_max = np.where(maximum > 0, maximum, 1 )
+    final_matrix = np.divide(A, new_max)
 
     if debug:
         dp = 7
@@ -109,6 +109,17 @@ def getAdjacencyMatrix(
 
 
 def distance_weight_adjacency(airports, threshold=1000):
+    """Generates a weight matrix where each entry is filled with a weight representation
+    of the distance between two airports
+
+    Args:
+        airports (list): List of ICAO airport strings
+        threshold (int, optional): Threshold for distance between airports for which the cell will take a value. 
+        Defaults to 1000.
+
+    Returns:
+        np.ndarray: Square numpy array
+    """
     D = np.zeros((len(airports), len(airports)))
     threshold = 1000
     for i, airport1 in enumerate(airports):
