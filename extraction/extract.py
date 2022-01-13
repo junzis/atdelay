@@ -1,11 +1,12 @@
 import pandas as pd
 import os
 from glob import glob
-from datetime import datetime
+from datetime import datetime, timedelta
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 from extraction.extractionvalues import *
 from extraction.airportvalues import *
+
 
 
 def extractData(
@@ -111,9 +112,11 @@ def calculateDelays(P: pd.DataFrame, delayTypes: list = ["arrival", "departure"]
         P = P.assign(
             DepartureDelay=lambda x: (x.ActualOBT - x.FiledOBT).astype("timedelta64[m]")
         )
+
     P = P.query(
         "ArrivalDelay < 90 & ArrivalDelay > -30 & DepartureDelay < 90 & DepartureDelay > -30 "
     )
+    
     return P
 
 
@@ -128,7 +131,7 @@ def filterAirports(P: pd.DataFrame, airports: list):
         pd.DataFrame: filtered flights dataframe
     """
 
-    P = P.query("`ADEP` in @airports & `ADES` in @airports")
+    P = P.query("`ADEP` in @airports | `ADES` in @airports")
     return P
 
 
@@ -196,21 +199,25 @@ def readLRDATA(saveFolder: str = "LRData", fileName: str = "LRDATA.csv"):
     P = pd.read_csv(fullfilename, header=0, index_col=0)
     return P
 
-
 def generalFilterAirport(
     start: datetime,
     end: datetime,
     airport: str,
     saveFolder: str = "filteredData",
     forceRegenerateData: bool = False,
+    startDefault=datetime(2018, 1, 1),
+    endDefault=datetime(2019, 12, 31),
 ):
     """Generate all the flights for a single airport, save and return as dataframe
 
     Args:
-        start (datetime): start date to filter for
-        end (datetime): end date to filter for
+        start (datetime): start date to filter for. Dates are inclusive.
+        end (datetime): end date to filter for. Dates are inclusive.
         airport (str): ICAO code for the airport
         saveFolder (str, optional): target save folder. Defaults to "filteredData".
+        forceRegenerateData (bool, optional): force regeneration of data even if it had already been generated. Defaults to False.
+        startDefault (datetime, optinoal): start date for the csv
+        endDefault (datetime, optinoal): end date for the csv
 
     Returns:
         pd.DataFrame: Dataframe with all flights for selected filters
@@ -220,9 +227,10 @@ def generalFilterAirport(
     if not os.path.exists(saveFolder):
         os.makedirs(saveFolder)
 
+    # For the first cold run it generates data for all dates to prevent problems
     if not os.path.exists(file) or forceRegenerateData:
-        print(f"Generating {airport} airport data from {start} to {end}")
-        P = extractData(start, end)
+        print(f"Generating {airport} airport data from {startDefault} to {endDefault}")
+        P = extractData(startDefault, endDefault)
         P = P.query("`ADES` == @airport | `ADEP` == @airport")
         P = calculateDelays(P)
         P.to_csv(file)
@@ -236,17 +244,24 @@ def generalFilterAirport(
             .assign(ActualAT=lambda x: pd.to_datetime(x.ActualAT, format=dform))
         )
 
+    # Actual date filter.
+    # Does NOT include flights that departed the night before but arrived within the filter
+    P = P.query("`FiledOBT` >= @start & `FiledAT` <= @end")
+
     return P
 
 
 def generateNNdata(
     airport: str,
     timeslotLength: int = 15,
+    GNNFormat: bool = False,
     saveFolder: str = "NNData",
     catagoricalFlightDuration: bool = False,
     forceRegenerateData: bool = False,
     start: datetime = datetime(2018, 1, 1),
     end: datetime = datetime(2019, 12, 31),
+    startDefault=datetime(2018, 1, 1),
+    endDefault=datetime(2019, 12, 31),
 ):
     """Aggregates all flights at a single airport by a certain timeslot.
 
@@ -259,6 +274,8 @@ def generateNNdata(
         forceRegenerateData (bool, optional): force regeneration of data even if it had already been generated. Defaults to False.
         start (datetime, optional): start date to filter for
         end (datetime, optional): end date to filter for
+        startDefault (datetime, optinoal): start date for the csv
+        endDefault (datetime, optinoal): end date for the csv
     Returns:
         pd.Dataframe: pandas dataframe with aggregate flight data, unscaled.
     """
@@ -272,7 +289,7 @@ def generateNNdata(
         print(
             f"Generating NN data for {airport} with a timeslot length of {timeslotLength} minutes"
         )
-        P = generalFilterAirport(start, end, airport)
+        P = generalFilterAirport(startDefault, endDefault, airport)
 
         # Temporary untill weather is added:
         numRunways = 0
@@ -318,7 +335,13 @@ def generateNNdata(
         P.loc[(P.arriving == True), "timeAtAirport"] = P.FiledAT
         P.loc[(P.arriving == False), "timeAtAirport"] = P.FiledOBT
 
-        # P = P.fillna(0)
+        # This creates a new index to ensure that we have no gaps in the timeslots later
+        def daterange(start_date, end_date):
+            delta = timedelta(minutes=timeslotLength)
+            while start_date < end_date:
+                yield start_date
+                start_date += delta
+        denseDateIndex = daterange(start, end)
 
         ### get aggregate features for rolling window
         Pagg = (
@@ -346,6 +369,10 @@ def generateNNdata(
                     "arrivalsFlightDuration6orMore": "mean",
                 }
             )
+            # This ensure that there are no timeslot gaps
+            # at the start and end of the dataframe
+            .reindex(denseDateIndex, fill_value=0)
+            # Engineering some features
             .assign(planes=lambda x: x.arriving - x.departing)
             .assign(runways=lambda x: numRunways)
             .assign(gates=lambda x: numGates)
@@ -374,7 +401,7 @@ def generateNNdata(
 
         # there are two ways the team wanted the flight
         # duration in bins of 3 hours or as an average,
-        #  here the data gets augmented based on the chase
+        # here the data gets augmented based on the chase
         if catagoricalFlightDuration:
             Pagg = Pagg.drop(
                 ["departuresFlightDuration", "arrivalsFlightDuration"], axis=1
@@ -398,12 +425,32 @@ def generateNNdata(
         Pagg = pd.read_csv(filename, header=0, index_col=0)
         Pagg = Pagg.assign(timeslot=lambda x: pd.to_datetime(x.timeslot, format=dform))
 
-    return Pagg
+    Pagg = Pagg.query("`timeslot` >= @start & `timeslot` <= @end")
+    
+    if GNNFormat and catagoricalFlightDuration:
+        raise ValueError("GNNFormat and catagoricalFlightDuration are not compatible")
+
+    if GNNFormat:
+        Y = Pagg.loc[:, ["arrivalsArrivalDelay", "departuresDepartureDelay"]]
+        T = Pagg.loc[:, ["timeslot"]]
+        Pagg = Pagg.drop(
+            [
+                "arrivalsArrivalDelay",
+                "departuresDepartureDelay",
+                "departuresArrivalDelay",
+                "timeslot",
+            ],
+            axis=1,
+        )
+        return Pagg, Y, T
+    else:
+        return Pagg
 
 
 def generateNNdataMultiple(
     airports: list,
     timeslotLength: int = 15,
+    GNNFormat: bool = False,
     saveFolder: str = "NNData",
     forceRegenerateData: bool = False,
     start: datetime = datetime(2018, 1, 1),
@@ -426,11 +473,15 @@ def generateNNdataMultiple(
         result = generateNNdata(
             airport,
             timeslotLength,
+            GNNFormat,
             saveFolder,
             forceRegenerateData,
             start=start,
             end=end,
         )
+        if GNNFormat:
+            result = {"X": result[0], "Y": result[1], "T": result[2]}
+
         dataDict[airport] = result
 
     return dataDict
@@ -448,7 +499,7 @@ def show_heatmap(P: pd.DataFrame, dtkey: str = None):
         P = P.drop([dtkey], axis=1)
 
     plt.matshow(P.corr(), cmap="RdBu_r", vmin=-1, vmax=1)
-    plt.xticks(range(P.shape[1]), P.columns, fontsize=14, rotation=90)
+    plt.xticks(range(P.shape[1]), P.columns, fontsize=12, rotation=-30)
     plt.gca().xaxis.tick_bottom()
     plt.yticks(range(P.shape[1]), P.columns, fontsize=14)
 
@@ -493,3 +544,4 @@ def show_raw_visualization(P: pd.DataFrame, date_time_key="timeslot"):
 
 if __name__ == "__main__":
     pass
+
