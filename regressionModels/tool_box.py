@@ -2,7 +2,7 @@ from re import L
 import pandas as pd
 from seaborn.rcmod import axes_style
 from extraction.airportvalues import *
-from extraction.extractionvalues import * 
+from extraction.extractionvalues import *
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import KFold, GridSearchCV
 from sklearn.metrics import get_scorer
@@ -24,7 +24,7 @@ def filtering_data_onehot(
     airport: str = "EGLL",
     save_to_csv: bool = False,
 ):
-    """Takes all the data points in a filename for a given interval of time, encodes it using it get_dummies, and focuses prediction efforts on a single airport of choosing. 
+    """Takes all the data points in a filename for a given interval of time, encodes it using it get_dummies, and focuses prediction efforts on a single airport of choosing.
 
     Args:
         filename (str, optional): Filename of the .csv file to extract data from. Defaults to "LRData/LRDATA.csv".
@@ -92,7 +92,7 @@ def capacity_calc(P: pd.DataFrame, airport: str = "EGLL", airport_capacity: int 
         airport_capacity (int, optional): Capacity of airport per hour defined as maximum take-offs per hour possible. Defaults to 88.
 
     Returns:
-        pd.DataFrame: dataframe with capacity of airport at time of flight 
+        pd.DataFrame: dataframe with capacity of airport at time of flight
     """
     airportlist = ICAOTOP50
     dform = "%Y-%m-%d %H:%M:%S"
@@ -150,18 +150,24 @@ def time_distance(P: pd.DataFrame):
     return P
 
 
-def haversine(P: pd.DataFrame):
+def haversine(*P: pd.DataFrame):
     """Calculates the great-circle distance between two decimal
     coordinates using the Haversine formula and applies it to a dataframe.
     The formula was found on https://en.wikipedia.org/wiki/Haversine_formula
 
     Args:
-        P (pd.DataFrame): Dataframe of LRData
+        P (pd.DataFrame): Dataframe of LRData or two coordinate tuples
 
     Returns:
         pd.DataFrame: Dataframe of LRData with extra column 'distance'
     """
-    coords_a, coords_b = (P["ADEPLong"], P["ADEPLat"]), (P["ADESLong"], P["ADESLat"])
+    if isinstance(P, pd.DataFrame):
+        coords_a, coords_b = (P["ADEPLong"], P["ADEPLat"]), (
+            P["ADESLong"],
+            P["ADESLat"],
+        )
+    else:
+        (coords_a, coords_b) = P
     # Conversion to radians is necessary for the trigonometric functions
     phi_1, phi_2 = radians(coords_a[1]), radians(coords_b[1])
     lambda_1, lambda_2 = radians(coords_a[0]), radians(coords_b[0])
@@ -196,7 +202,8 @@ def dummies_encode(P: pd.DataFrame, airport: str = None):
 
     else:
         new_df = P.drop(
-            ["ADES", "FiledOBT", "FiledAT", "ACType", "ArrivalDelay"], axis=1,
+            ["ADES", "FiledOBT", "FiledAT", "ACType", "ArrivalDelay"],
+            axis=1,
         )
         new_df3 = pd.get_dummies(
             new_df, columns=["ADEP", "ACOperator", "month", "weekday"]
@@ -268,7 +275,12 @@ def parameter_search(
 
     cv = KFold(n_splits=n_folds, random_state=42, shuffle=True)
     grid_search = GridSearchCV(
-        model, parameters, cv=cv, n_jobs=-1, verbose=4, scoring=score_string,
+        model,
+        parameters,
+        cv=cv,
+        n_jobs=-1,
+        verbose=4,
+        scoring=score_string,
     ).fit(X_train, y_train)
 
     print("grid search = ", grid_search)
@@ -329,7 +341,7 @@ def plot(
         xlim=x_limits,
         ylim=y_limits,
         # fill=True,
-        color="#4CB391"
+        color="#4CB391",
     )
     sns.regplot(x=x_name, y=y_name, data=df, scatter=False, ax=g.ax_joint)
     g.fig.suptitle(f"{x_name} vs {y_name}", size=20)
@@ -342,7 +354,7 @@ def flights_per_airport(
     start: datetime = datetime(2018, 1, 1),
     end: datetime = datetime(2019, 12, 31),
 ):
-    """Takes all the data points in a filename for a given interval of time, and makes a dict for each airport with amount of flights from that airport. 
+    """Takes all the data points in a filename for a given interval of time, and makes a dict for each airport with amount of flights from that airport.
 
     Args:
         filename (str, optional): Filename of the .csv file to extract data from. Defaults to "LRData/LRDATA.csv".
@@ -379,8 +391,7 @@ def flights_per_airport(
 
 
 def plot_flightcount_vs_error():
-    """Finds amount of flights for each airport and plots the mean absolute error of random forest model against it. 
-    """
+    """Finds amount of flights for each airport and plots the mean absolute error of random forest model against it."""
     flights_per_airport_dict, airport_list = flights_per_airport()
     acc_per_airport = error_dict
 
@@ -396,4 +407,3 @@ def plot_flightcount_vs_error():
     airport_array = airport_array[1:, :].astype("float32")
     df_plot = pd.DataFrame(data=airport_array, columns=["error", "flight count"])
     plot(df_plot, "flight count", "error")
-
