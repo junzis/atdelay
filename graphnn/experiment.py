@@ -6,7 +6,7 @@ Petar Veličković, Guillem Cucurull, Arantxa Casanova, Adriana Romero, Pietro L
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras.callbacks import EarlyStopping
-from tensorflow.keras.layers import Dropout, Input, Dense
+from tensorflow.keras.layers import Dropout, Input, Dense, LSTM
 from tensorflow.keras.losses import CategoricalCrossentropy, MeanAbsoluteError
 from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import Adam
@@ -40,44 +40,32 @@ N = graphData.n_nodes  # Number of nodes in the graph
 F = graphData.n_node_features  # Original size of node features
 n_out = graphData.n_labels  # Number of classes
 
+lookback = 8 # steps
 
 # Model definition
-x_in = Input(shape=(F,))
-a_in = Input((N,), sparse=True)
+x_in = Input(shape=(F, lookback))
+a_in = Input((N, lookback), sparse=True)
 
 gc_1 = GATConv(
-    channels,
+    20,
     attn_heads=n_attn_heads,
-    concat_heads=True,
+    concat_heads=False,
     activation="relu",
     kernel_regularizer=l2(l2_reg),
     attn_kernel_regularizer=l2(l2_reg),
     bias_regularizer=l2(l2_reg),
 )([x_in, a_in])
 
-gc_2 = GATConv(
-    n_out,
-    attn_heads=1,
-    concat_heads=False,
-    activation="softmax",
-    kernel_regularizer=l2(l2_reg),
-    attn_kernel_regularizer=l2(l2_reg),
-    bias_regularizer=l2(l2_reg),
-)([gc_1, a_in])
-
-diffP = DiffPool(
-    len(airports),
-    channels=None,
-    return_mask=False,
-    activation=None,
-    kernel_initializer="glorot_uniform",
-    kernel_regularizer=None,
-    kernel_constraint=None,
-)([gc_2, a_in])
-# dense = Dense(2)(diffP)
+LSTMlayer = LSTM(20, return_sequences=True)(gc_1)
+dense1 = Dense(20)(LSTMlayer)
+LSTMlayer2 = LSTM(20)(dense1)
+dense2 = Dense(2)(LSTMlayer2)
 
 # Build model
-model = Model(inputs=[x_in, a_in], outputs=diffP)
+model = Model(inputs=[x_in, a_in], outputs=dense2)
+
+tf.keras.utils.plot_model(model, show_shapes=True)
+
 optimizer = Adam(lr=learning_rate)
 model.compile(
     optimizer=optimizer,
