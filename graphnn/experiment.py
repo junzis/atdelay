@@ -12,7 +12,7 @@ from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.regularizers import l2
 from tensorflow.random import set_seed
-from spektral.layers import GCNConv, GlobalSumPool
+from spektral.layers import GCNConv, GlobalSumPool, DiffPool
 import keras.backend as K
 from spektral.data.loaders import SingleLoader, DisjointLoader, BatchLoader
 from spektral.datasets.citation import Citation
@@ -26,15 +26,13 @@ set_seed(0)
 # graphData = Citation("cora", normalize_x=True, transforms=[LayerPreprocess(GATConv)])
 airports = ICAOTOP10
 # Load data
-graphData = FlightNetworkDataset(
-    airports, timeslotLength=60
-)
+graphData = FlightNetworkDataset(airports, timeslotLength=60)
 
 # Parameters
 channels = 8  # Number of channels in each head of the first GAT layer
 n_attn_heads = 8  # Number of attention heads in first GAT layer
 l2_reg = 2.5e-4  # L2 regularization rate
-learning_rate = 1   # Learning rate
+learning_rate = 2e-4  # Learning rate
 epochs = 1000  # Number of training epochs
 patience = 100  # Patience for early stopping
 
@@ -66,10 +64,20 @@ gc_2 = GATConv(
     attn_kernel_regularizer=l2(l2_reg),
     bias_regularizer=l2(l2_reg),
 )([gc_1, a_in])
-dense = Dense(2)(gc_2)
+
+diffP = DiffPool(
+    len(airports),
+    channels=None,
+    return_mask=False,
+    activation=None,
+    kernel_initializer="glorot_uniform",
+    kernel_regularizer=None,
+    kernel_constraint=None,
+)([gc_2, a_in])
+# dense = Dense(2)(diffP)
 
 # Build model
-model = Model(inputs=[x_in, a_in], outputs=dense)
+model = Model(inputs=[x_in, a_in], outputs=diffP)
 optimizer = Adam(lr=learning_rate)
 model.compile(
     optimizer=optimizer,
@@ -86,13 +94,16 @@ model.fit(
     validation_data=loader_tr.load(),
     validation_steps=loader_tr.steps_per_epoch,
     epochs=epochs,
-    callbacks=[EarlyStopping(patience=patience, restore_best_weights=True)],verbose = 0
+    callbacks=[EarlyStopping(patience=patience, restore_best_weights=True)],
+    verbose=1,
 )
 
 
 timeSlice = 2
 print(
-    model.predict(BatchLoader(graphData[timeSlice:timeSlice+1], shuffle=False).load(), steps=1)[:, :]
+    model.predict(
+        BatchLoader(graphData[timeSlice : timeSlice + 1], shuffle=False).load(), steps=1
+    )[:, :]
 )
 graphData.visualiseGraph(timeSlice)
 # print(model.evaluate(BatchLoader(graphData).load()))

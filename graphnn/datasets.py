@@ -117,8 +117,8 @@ class FlightNetworkDataset(Dataset):
                 round(graph.y[idx][1], 2),
             )
             pos[idx] = [
-                airport_dict[airport]["latitude"],
                 airport_dict[airport]["longitude"],
+                airport_dict[airport]["latitude"],
             ]
             labels[idx] = airport
 
