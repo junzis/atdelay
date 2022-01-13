@@ -8,6 +8,8 @@ import matplotlib.pyplot as plt
 import requests
 from tqdm import tqdm
 from airportvalues import airport_dict
+from glob import glob
+
 
 def basic_data_reader(fileloc: str, data: str, max_scale: float = None, min_scale: float = None):
     """Plots the weather data from grib file into an image that 'moves'
@@ -78,17 +80,17 @@ def fetch_grb(year, month, day, hour, pred=0, plot_data : bool = False):
     if not os.path.exists(f'./data/Weather_Data_Filtered/cape/{year}/cape_{year}_{month}_{day}_{hour}.npy'):
         remote_loc = "/%s/%s/gfsanl_3_%s_%s_%s.grb2" % (ym, ymd, ymd, hm, pred)
         remote_url = windgfs_url + remote_loc
-        print("\n Downloading %s" % remote_url)
+        # print("\n Downloading %s" % remote_url)
         response = requests.get(remote_url, stream=True)
         if response.status_code != 200:
-                    print("Error. remote data not found")
+                    # print("Error. remote data not found")
                     return None
-        else:
-            print('Download succesfull!')
+        # else:
+        #     print('Download succesfull!')
 
         
         with open(fpath, "wb") as f:
-            print('Writing to grib...')
+            # print('Writing to grib...')
             total_length = response.headers.get('content-length')
 
             if total_length is None:  # no content length header
@@ -96,12 +98,12 @@ def fetch_grb(year, month, day, hour, pred=0, plot_data : bool = False):
             else:
                 dl = 0
                 total_length = int(total_length)
-                for data in tqdm(response.iter_content(chunk_size=4096)):
+                for data in response.iter_content(chunk_size=4096):
                     dl += len(data)
                     f.write(data)
                     done = int(100 * dl / total_length)
-                    sys.stdout.write("\r[%s%s]" % ('=' * done, ' ' * (100-done)) )
-                    sys.stdout.flush()
+                    # sys.stdout.write("\r[%s%s]" % ('=' * done, ' ' * (100-done)) )
+                    # sys.stdout.flush()
         
         ds = xr.open_dataset(fpath, engine='cfgrib', backend_kwargs={'filter_by_keys': {'typeOfLevel': 'surface'}}, decode_coords= True)
         ds2 = ds.where((ds.longitude < 60) & (ds.latitude > 30) & (ds.latitude < 70), drop=True)
@@ -120,23 +122,31 @@ def fetch_grb(year, month, day, hour, pred=0, plot_data : bool = False):
                 plt.show()
         os.remove(fpath)
         os.remove(fpath + '.923a8.idx')
-    else:
-        print('File already exists!')
+    # else:
+        # print('File already exists!')
     
 def npy_to_df(year: int, interval: int):
     """grabs numpy files and saves a df for each airport with interpolated data.
 
     Args:
         year (int, optional): year to grab data from.
-        hour_interval (bool, optional): minute intervals to have data points at (should be between 60 - 1).
+        interval (bool, optional): minute intervals to have data points at (should be between 60 - 1).
     """
 
     if 0 >= interval >= 61:
         raise ValueError('Interval value should be between 1 and 60 minutes')
+    if 60 % interval != 0:
+        raise ValueError('Interval should always contain each full hour')
+
+    if not os.path.exists(f'./data/Weather_Data_Filtered/gust/{year}/gust_{year}_3_1_0.npy'):
+        if year == 2018 or year == 2019:
+            raise FileNotFoundError(f'COULD NOT FIND {year} DATA! Make sure you have the 2019 and 2018 data downloaded correctly')
+        else:
+            raise FileNotFoundError(f'COULD NOT FIND {year} DATA! If you want data for a year other than 2019 and 2018, run fetch_grb() in a for loop (see weather.py __main__). Warning: this function takes ~hour to run')
 
     if not os.path.exists(f'./data/Weather_Data_Filtered/Airports/{interval}_interval/{year}/'):
         os.makedirs(f'./data/Weather_Data_Filtered/Airports/{interval}_interval/{year}/')
-
+    
     minute_list = []
     overloaded = False
     minute = 0
@@ -146,10 +156,9 @@ def npy_to_df(year: int, interval: int):
         if minute >= 60:
             overloaded = True
     
-    for airport in airport_dict:
+    for airport in tqdm(airport_dict):
         long = int(airport_dict[airport]['longitude'])
         lat = int(airport_dict[airport]['latitude'])
-        print('Working on airport', airport)
         airport_data = {'time': [], 'vis': [], 'gust': [], 't': [], 'cpofp': [], 'lftx': [], 'cape': []}
         for month in [3, 6, 9, 12]:
             for day in range(1, 31):
@@ -172,11 +181,45 @@ def npy_to_df(year: int, interval: int):
         pd.DataFrame((df)).to_csv(f"./data/Weather_Data_Filtered/Airports/{interval}_interval/{year}/{airport}_{year}_{interval}.csv", header=True, index=False)
 
 
+def fetch_weather_data(airport: str, interval: int, years: list = [2019, 2018]):
+    """reads a weather data file, and if it does not exist, it will generate it and read it afterwards.
+
+    Args:
+        airport (str): airport code (FE: 'EBBR').
+        interval (int): minute intervals to have data points at (should be between 60 - 1).
+        years (list): list of years to have in dataframe. Defaults to [2019, 2018].
+
+    Returns:
+        pd.DataFrame: dataframe with weather data for years that were assigned
+    """
+    
+    if airport not in airport_dict:
+        raise ValueError('INCORRECT AIRPORT REQUEST')
+    if 0 >= interval >= 61:
+        raise ValueError('Interval value should be between 1 and 60 minutes')
+    if 60 % interval != 0:
+        raise ValueError('Interval should always contain each full hour')
+    
+    for year in years:
+        if not os.path.exists(f'./data/Weather_Data_Filtered/Airports/{interval}_interval/{year}/{airport}_{year}_{interval}.csv'):
+            print(f'generating {year} weather data for {interval} minute interval')
+            npy_to_df(year, interval)
+    
+    listOfFiles = []  # list with location of airport files of all years
+    for year in years:
+        listOfFiles.extend(glob(f"./data/Weather_Data_Filtered/Airports/{interval}_interval/{year}/{airport}_*_{interval}.csv"))
+    final_df = pd.DataFrame()
+    for fileloc in listOfFiles:
+        df = pd.read_csv(fileloc, header= None)
+        final_df = final_df.append(df, ignore_index=True)
+    return final_df
+
+
 if __name__ == "__main__":
     # for month in [3, 6, 9, 12]:
-    #     for day in range(1, 31):
+    #     for day in tqdm(range(1, 31)):
     #         for hour in [0, 6, 12, 18]:
-    #             fetch_grb(2019, month, day, hour)
+    #             fetch_grb(2018, month, day, hour)
 
     # basic_data_reader('./data/Schiphol_Weather_Data.grib')
 
@@ -186,5 +229,8 @@ if __name__ == "__main__":
     #         for hour in [0, 6, 12, 18]:
     #             basic_data_reader(f'./data/Weather_Data_Filtered/{type_data}/2019/{type_data}_{2019}_{month2}_{day}_{hour}.npy', type_data, 50 +273.15, -20 + 273.15)
 
-    npy_to_df(2019, 15)
+    # npy_to_df(2019, 15)
+
+    a = fetch_weather_data('EBBR', 15, [2019])
+    print(a)
     pass
