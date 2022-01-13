@@ -43,6 +43,7 @@ class GATLSTM(Model):
         ]
 
     def call(self, inputs):
+        # Not sure how to deal with the adjacency matrices as inputs
         for layer in self.layers:
             out = layer(inputs)
         return out
