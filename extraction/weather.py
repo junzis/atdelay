@@ -253,6 +253,15 @@ def fetch_weather_data(airport: str, interval: int, years: list = [2019, 2018]):
 
     Returns:
         pd.DataFrame: dataframe with weather data for years that were assigned
+        vis         =  Visibility [m]
+        gust        =  Wind speed [m/s]
+        t           =  Temperature [K]
+        cpofp       =  Prob. of frozen precipitation [%] 
+        lftx        =  Surface lifted index [K] 
+        (The lifted index (LI) is the temperature difference between the environment Te(p) and an air parcel lifted adiabatically Tp(p) at a given pressure height in the troposphere (lowest layer where most weather occurs) of the atmosphere, usually 500 hPa (mb). The temperature is measured in Celsius. When the value is positive, the atmosphere (at the respective height) is stable and when the value is negative, the atmosphere is unstable.)
+        cape        =  Convective available potential energy [J/kg]
+        (In meteorology, convective available potential energy (commonly abbreviated as CAPE), is the integrated amount of work that the upward (positive) buoyancy force would perform on a given mass of air (called an air parcel) if it rose vertically through the entire atmosphere. At high values of cape (1000+)  there is a high probability of heavy thunderstorms) 
+
     """
 
     dform = "%Y-%m-%d %H:%M:%S"
