@@ -9,3 +9,8 @@ __pycache__
 testFolder/
 test.py
 merge_ignore/
+*.xml
+.idea
+*.grib
+.idea/workspace.xml
+test.py
