@@ -7,4 +7,8 @@ data/
 LRData
 __pycache__
 testFolder/
+*.xml
+.idea
+*.grib
+.idea/workspace.xml
 test.py
