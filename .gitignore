@@ -11,3 +11,4 @@ testFolder/
 .idea
 *.grib
 .idea/workspace.xml
+test.py
