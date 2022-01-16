@@ -46,7 +46,7 @@ lookback = 8 # steps
 x_in = Input(shape=(F, lookback))
 a_in = Input((N, lookback), sparse=True)
 
-gc_1 = GATConv(
+gat = GATConv(
     20,
     attn_heads=n_attn_heads,
     concat_heads=False,
@@ -56,10 +56,12 @@ gc_1 = GATConv(
     bias_regularizer=l2(l2_reg),
 )([x_in, a_in])
 
-LSTMlayer = LSTM(20, return_sequences=True)(gc_1)
-dense1 = Dense(20)(LSTMlayer)
-LSTMlayer2 = LSTM(20)(dense1)
-dense2 = Dense(2)(LSTMlayer2)
+
+
+# LSTMlayer = LSTM(20, return_sequences=True)(gat)
+# dense1 = Dense(20)(LSTMlayer)
+# LSTMlayer2 = LSTM(20)(dense1)
+dense2 = Dense(2)(gat)
 
 # Build model
 model = Model(inputs=[x_in, a_in], outputs=dense2)
