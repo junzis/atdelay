@@ -8,3 +8,4 @@ LRData
 __pycache__
 testFolder/
 test.py
+logs/
