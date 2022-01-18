@@ -47,7 +47,7 @@ def extractData(
         # Dank file selection https://pynative.com/python-glob/
         listOfFiles.extend(glob(f"{folderName}/{year}/*/Flights_2*.csv*"))
     
-        print(glob(f"{folderName}/{year}/*/Flights_2*.csv*"))
+        # print(glob(f"{folderName}/{year}/*/Flights_2*.csv*"))
 
     finalData = pd.DataFrame()
 
@@ -264,20 +264,24 @@ def generateNNdata(
     end: datetime = datetime(2019, 12, 31),
     startDefault=datetime(2018, 1, 1),
     endDefault=datetime(2019, 12, 31),
+    availableMonths:list = [3,6,9,12]
 ):
     """Aggregates all flights at a single airport by a certain timeslot.
 
     Args:
         airport (str): ICAO code for a single airport
         timeslotLength (int, optional): length to aggregate flights for in minutes. Defaults to 15 minutes.
+        GNNFormat: (bool, optional): returns the data in format used for GNN model (Pagg, Y, T) Defaults to False
         saveFolder (str, optional): folder to save data in. Defaults to "NNData".
         catagoricalFlightDelay (bool, optional): If false, flight delay is presented as average.\
              If True it is generated as bins from 0-3, 3-6 and >6. Defaults to False.
         forceRegenerateData (bool, optional): force regeneration of data even if it had already been generated. Defaults to False.
         start (datetime, optional): start date to filter for
         end (datetime, optional): end date to filter for
-        startDefault (datetime, optinoal): start date for the csv
-        endDefault (datetime, optinoal): end date for the csv
+        startDefault (datetime, optinoal): start date to generate full data. Defaults to datetime(2019, 1, 31)
+        endDefault (datetime, optinoal): end date to generate full data. Defaults to datetime(2019, 12, 31)
+        availableMonths (list, optional): list of months available in \
+            eurocontrol. Defaults to [March, June, September, December]
     Returns:
         pd.Dataframe: pandas dataframe with aggregate flight data, unscaled.
     """
@@ -341,9 +345,19 @@ def generateNNdata(
         def daterange(start_date, end_date):
             delta = timedelta(minutes=timeslotLength)
             while start_date < end_date:
-                yield start_date
+                if start_date.month in availableMonths:
+                    # Only yields the months for which we have
+                    # data specified in the argument availableMonths
+                    yield start_date
                 start_date += delta
-        denseDateIndex = daterange(start, end)
+        denseDateIndex = daterange(startDefault, endDefault)
+
+        # Functionality for airports outside of the top50
+        print(list(airport_dict.keys()))
+        if airport in list(airport_dict.keys()):
+            airportCapacity = airport_dict[airport]["capacity"] 
+        else:
+            airportCapacity = 60 # this is a common value
 
         ### get aggregate features for rolling window
         Pagg = (
@@ -380,7 +394,7 @@ def generateNNdata(
             .assign(gates=lambda x: numGates)
             .assign(
                 capacityFilled=lambda x: (x.arriving + x.departing)
-                / airport_dict[airport]["capacity"]
+                / airportCapacity
             )
             .assign(weekend=lambda x: x.index.weekday >= 5)
             .assign(winter=lambda x: (x.index.month > 11) | (x.index.month < 3))
