@@ -441,7 +441,7 @@ def generateNNdata(
         Pagg = pd.read_csv(filename, header=0, index_col=0)
         Pagg = Pagg.assign(timeslot=lambda x: pd.to_datetime(x.timeslot, format=dform))
 
-    Pagg = Pagg.query("`timeslot` >= @start & `timeslot` <= @end")
+    Pagg = Pagg.query("`timeslot` >= @start & `timeslot` < @end")
     
     if GNNFormat and catagoricalFlightDuration:
         raise ValueError("GNNFormat and catagoricalFlightDuration are not compatible")
