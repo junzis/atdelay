@@ -161,8 +161,7 @@ def haversine(*P: pd.DataFrame):
     Returns:
         pd.DataFrame: Dataframe of LRData with extra column 'distance'
     """
-    if isinstance(P, pd.DataFrame):
-
+    if isinstance(P[0], pd.DataFrame):
         P = P[0]
         coords_a, coords_b = (P["ADEPLong"], P["ADEPLat"]), (
             P["ADESLong"],
