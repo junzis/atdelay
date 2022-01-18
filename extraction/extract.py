@@ -1,7 +1,7 @@
 import pandas as pd
 import os
 from glob import glob
-from datetime import datetime
+from datetime import datetime, timedelta
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 from extraction.extractionvalues import *
@@ -45,7 +45,9 @@ def extractData(
     listOfFiles = []
     for year in years:
         # Dank file selection https://pynative.com/python-glob/
-        listOfFiles.extend(glob(f"{folderName}\\{year}/*/Flights_2*.csv*"))
+        listOfFiles.extend(glob(f"{folderName}/{year}/*/Flights_2*.csv*"))
+    
+        print(glob(f"{folderName}/{year}/*/Flights_2*.csv*"))
 
     finalData = pd.DataFrame()
 
@@ -254,6 +256,7 @@ def generalFilterAirport(
 def generateNNdata(
     airport: str,
     timeslotLength: int = 15,
+    GNNFormat: bool = False,
     saveFolder: str = "NNData",
     catagoricalFlightDuration: bool = False,
     forceRegenerateData: bool = False,
@@ -334,7 +337,13 @@ def generateNNdata(
         P.loc[(P.arriving == True), "timeAtAirport"] = P.FiledAT
         P.loc[(P.arriving == False), "timeAtAirport"] = P.FiledOBT
 
-        # P = P.fillna(0)
+        # This creates a new index to ensure that we have no gaps in the timeslots later
+        def daterange(start_date, end_date):
+            delta = timedelta(minutes=timeslotLength)
+            while start_date < end_date:
+                yield start_date
+                start_date += delta
+        denseDateIndex = daterange(start, end)
 
         ### get aggregate features for rolling window
         Pagg = (
@@ -362,6 +371,10 @@ def generateNNdata(
                     "arrivalsFlightDuration6orMore": "mean",
                 }
             )
+            # This ensure that there are no timeslot gaps
+            # at the start and end of the dataframe
+            .reindex(denseDateIndex, fill_value=0)
+            # Engineering some features
             .assign(planes=lambda x: x.arriving - x.departing)
             .assign(runways=lambda x: numRunways)
             .assign(gates=lambda x: numGates)
@@ -390,7 +403,7 @@ def generateNNdata(
 
         # there are two ways the team wanted the flight
         # duration in bins of 3 hours or as an average,
-        #  here the data gets augmented based on the chase
+        # here the data gets augmented based on the chase
         if catagoricalFlightDuration:
             Pagg = Pagg.drop(
                 ["departuresFlightDuration", "arrivalsFlightDuration"], axis=1
@@ -415,13 +428,31 @@ def generateNNdata(
         Pagg = Pagg.assign(timeslot=lambda x: pd.to_datetime(x.timeslot, format=dform))
 
     Pagg = Pagg.query("`timeslot` >= @start & `timeslot` <= @end")
+    
+    if GNNFormat and catagoricalFlightDuration:
+        raise ValueError("GNNFormat and catagoricalFlightDuration are not compatible")
 
-    return Pagg
+    if GNNFormat:
+        Y = Pagg.loc[:, ["arrivalsArrivalDelay", "departuresDepartureDelay"]]
+        T = Pagg.loc[:, ["timeslot"]]
+        Pagg = Pagg.drop(
+            [
+                "arrivalsArrivalDelay",
+                "departuresDepartureDelay",
+                "departuresArrivalDelay",
+                "timeslot",
+            ],
+            axis=1,
+        )
+        return Pagg, Y, T
+    else:
+        return Pagg
 
 
 def generateNNdataMultiple(
     airports: list,
     timeslotLength: int = 15,
+    GNNFormat: bool = False,
     saveFolder: str = "NNData",
     forceRegenerateData: bool = False,
     start: datetime = datetime(2018, 1, 1),
@@ -444,11 +475,15 @@ def generateNNdataMultiple(
         result = generateNNdata(
             airport,
             timeslotLength,
+            GNNFormat,
             saveFolder,
             forceRegenerateData,
             start=start,
             end=end,
         )
+        if GNNFormat:
+            result = {"X": result[0], "Y": result[1], "T": result[2]}
+
         dataDict[airport] = result
 
     return dataDict
@@ -466,7 +501,7 @@ def show_heatmap(P: pd.DataFrame, dtkey: str = None):
         P = P.drop([dtkey], axis=1)
 
     plt.matshow(P.corr(), cmap="RdBu_r", vmin=-1, vmax=1)
-    plt.xticks(range(P.shape[1]), P.columns, fontsize=14, rotation=90)
+    plt.xticks(range(P.shape[1]), P.columns, fontsize=12, rotation=-30)
     plt.gca().xaxis.tick_bottom()
     plt.yticks(range(P.shape[1]), P.columns, fontsize=14)
 

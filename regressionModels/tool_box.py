@@ -156,12 +156,13 @@ def haversine(*P: pd.DataFrame):
     The formula was found on https://en.wikipedia.org/wiki/Haversine_formula
 
     Args:
-        P (pd.DataFrame): Dataframe of LRData
+        P (pd.DataFrame): Dataframe of LRData or two coordinate tuples
 
     Returns:
         pd.DataFrame: Dataframe of LRData with extra column 'distance'
     """
     if isinstance(P, pd.DataFrame):
+
         P = P[0]
         coords_a, coords_b = (P["ADEPLong"], P["ADEPLat"]), (
             P["ADESLong"],
