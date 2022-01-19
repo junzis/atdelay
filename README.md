@@ -29,6 +29,8 @@ The models are showcased in their respective jupyter notebooks.
 Additionally, supporting functions have been created to process the data and visualise it. Most of the central data processing is done in the extraction module.
 
 ## Installation steps
+### Note on documentation
+Please note that **all** functions in the repository include an in-depth docstring that explains the function and its parameters. To showcase the work done, jupyter notebooks have been created, explanation on the processes to achieve results are explained there.
 ### Prerequisite packages
 This project requires a significant amount of packages to work, including tensorflow. A lot of time was spend getting these to work properly. Ultimately, in our experience the easiest way to install it on windows was using pip and not conda. We recommend creating a virtual enviroment via pip and installing the packages via our requirements.txt file using:
 ```
@@ -59,7 +61,7 @@ pip install Air-traffic-delays-prediction-model or something like this
 
 ### Acquiring the data 
 The project uses 3 main sets of data:
-- Flights data, provided by EUROCONTROL - (ADD LINK FOR GENERAL AUDIENCE) (For graders of the capstone project this is provided in the readme.txt)
+- Flights data, provided by EUROCONTROL - (TODO ADD LINK FOR GENERAL AUDIENCE) (For graders of the capstone project this is provided in the readme.txt)
 - Weather data provided by [NCEI](https://www.ncei.noaa.gov/) - retrieved by the programme automatically.
 - Airport information (Coordinates etc) - provided in the repository for the Europe's top 50 airports.
 
@@ -98,20 +100,20 @@ Air-traffic-delays-prediction-model
 
 ## Extraction
 
+TODO TALK ABOUT SOME OF THE FUNCTIONS IN THE FLOW CHART
+
 ## Models
-### Single airport prediction
+### Individual flight prediction
 A Random Forest regression model was used to obtain delays at individual airports. Features such as airline, planned arrival time and airport capacity were used as input to predict the target variable, which is *arrival delay*. 
 
-EDIT THIS SECTION
+TODO EDIT THIS SECTION
+
+### Single airport prediction
+TODO EDIT THIS SECTION
 
 ### Graph Neural Network
 
-EDIT THIS SECTION
+TODO EDIT THIS SECTION
 
-
-
-
-
-## How to use
-description of workflow (something to do with the notebooks maybe? or some other kind of code example)
-
+## Troubleshooting and Contact
+TODO MAYBE OR MAYBE NOT ADD THIS
