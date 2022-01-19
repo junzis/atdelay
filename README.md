@@ -16,7 +16,7 @@ The following people contributed to the project:
 
 
 ## Project description
-The aim of this project was to build Machine learning models which can predict airport traffic delays and their propagations in European airports. Flight data was retrieved from EUROCONTROL with additional data found elsewhere. (See [**Data**](#) for more information.)
+The aim of this project was to build Machine learning models which can predict airport traffic delays and their propagations in European airports. Flight data was retrieved from EUROCONTROL with additional data found elsewhere. (See [**Data**](#acquiring-the-data) for more information.)
 
 The project resulted in 3 different models:
 
@@ -29,7 +29,6 @@ The models are showcased in their respective jupyter notebooks.
 Additionally, supporting functions have been created to process the data and visualise it. Most of the central data processing is done in the extraction module.
 
 ## Installation steps
----
 ### Prerequisite packages
 This project requires a significant amount of packages to work, including tensorflow. A lot of time was spend getting these to work properly. Ultimately, in our experience the easiest way to install it on windows was using pip and not conda. We recommend creating a virtual enviroment via pip and installing the packages via our requirements.txt file using:
 ```
@@ -66,6 +65,12 @@ The project uses 3 main sets of data:
 
 The usage of each of these is summarised in the chart below. Many of the functions in extract have a 'generate/write/read' capability meaning they generate the full data on the first cold run and return the stored filtered data from the data on subsequent runs. This is indicated by the hollow arrows in the chart below. Some of the functions can take long to generate, for example generating the weather data and Neural Network data for the top 50 airports can take up to an hour each. For capstone graders, reduced versions of the the filtered datasets are provided in the readme.txt. For potential legal reasons they are not provided publically in this repository.
 
+![function chart of extraction](https://github.com/ConstantinosAr/Air-traffic-delays-prediction-model/blob/updateReadme/docs/funcChart.png)
+
+
+![function chart of extraction](/docs/funcChart.png)
+
+
 #### Filetree
 Your file tree should look something like this:
 ```
@@ -93,15 +98,10 @@ Air-traffic-delays-prediction-model
 .
 .
 ```
-IMAGE WITH DATAFLOW BELOW
-docs\funcChart.png
-[function chart of extraction]: https://github.com/adam-p/docs/funcChart.png "Logo Title Text 2"
 
 ## Extraction
----
 
 ## Models
----
 ### Single airport prediction
 A Random Forest regression model was used to obtain delays at individual airports. Features such as airline, planned arrival time and airport capacity were used as input to predict the target variable, which is *arrival delay*. 
 
