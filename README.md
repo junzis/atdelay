@@ -1,10 +1,12 @@
-# Air-traffic-delays-prediction-model
+# Air Traffic Delays Prediction Model
 
   
-This project was made as part of the Capstone Project (TI3150TU) of the minor Engineering with AI at Delft University of Technology. (Dec 2021 - Jan 2022)  
+This project was made as part of the Capstone Project (TI3150TU) of the minor Engineering with AI at Delft University of Technology. 
+
+Dec 2021 - Jan 2022
 
 ## Contributors
-The following people contributed to the project:
+The following people contributed to the project as part of Capstone:
 
 * Constantinos Aristodemou @ConstantinosAr
 * Vlad Buzetelu @vladbuzetelu
