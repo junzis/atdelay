@@ -12,3 +12,4 @@ testFolder/
 *.grib
 .idea/workspace.xml
 test.py
+logs/

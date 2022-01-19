@@ -256,7 +256,7 @@ def generateNNdata(
     airport: str,
     timeslotLength: int = 15,
     GNNFormat: bool = False,
-    enableWeather: bool = False,
+    disableWeather: bool = True,
     saveFolder: str = "NNData",
     catagoricalFlightDuration: bool = False,
     forceRegenerateData: bool = False,
@@ -272,10 +272,11 @@ def generateNNdata(
         airport (str): ICAO code for a single airport
         timeslotLength (int, optional): length to aggregate flights for in minutes. Defaults to 15 minutes.
         GNNFormat: (bool, optional): returns the data in format used for GNN model (Pagg, Y, T). Defaults to False
-        enableWeather: (bool, optional): Includes weather features:\
+        disableWeather: (bool, optional): disables weather features:\
              (["timeslot", "visibility", "windspeed",\
                "temperature", "frozenprecip", \
-               "surfaceliftedindex", "cape"]). Defaults to False.
+               "surfaceliftedindex", "cape"]). Defaults to True.
+
         saveFolder (str, optional): folder to save data in. Defaults to "NNData".
         catagoricalFlightDelay (bool, optional): If false, flight delay is presented as average.\
              If True it is generated as bins from 0-3, 3-6 and >6. Defaults to False.
@@ -450,10 +451,10 @@ def generateNNdata(
 
     Pagg = Pagg.query("`timeslot` >= @start & `timeslot` < @end")
 
-    if not enableWeather:
-        Pagg.drop(
+    if disableWeather:
+        Pagg = Pagg.drop(
             [
-                "timeslot",
+
                 "visibility",
                 "windspeed",
                 "temperature",
@@ -488,7 +489,7 @@ def generateNNdataMultiple(
     airports: list,
     timeslotLength: int = 15,
     GNNFormat: bool = False,
-    enableWeather: bool = False,
+    disableWeather: bool = True,
     saveFolder: str = "NNData",
     forceRegenerateData: bool = False,
     start: datetime = datetime(2018, 1, 1),
@@ -500,10 +501,10 @@ def generateNNdataMultiple(
         airports (list): list of ICAO airport codes
         timeslotLength (int, optional): length to aggregate flights for in minutes. Defaults to 15 minutes.
         GNNFormat: (bool, optional): returns the data in format used for GNN model (Pagg, Y, T). Defaults to False
-        enableWeather: (bool, optional): Includes weather features:\
+        disableWeather: (bool, optional): disables weather features:\
                         (["timeslot", "visibility", "windspeed",\
                         "temperature", "frozenprecip", \
-                        "surfaceliftedindex", "cape"]). Defaults to False.
+                        "surfaceliftedindex", "cape"]). Defaults to True.
         saveFolder (str, optional): folder to save data in. Defaults to "NNData".
         forceRegenerateData (bool, optional): force regeneration of data even if it had already been generated. Defaults to False.
         start (datetime, optional): start date to filter for.
@@ -518,6 +519,7 @@ def generateNNdataMultiple(
             airport,
             timeslotLength,
             GNNFormat,
+            disableWeather,
             saveFolder,
             forceRegenerateData,
             start=start,
