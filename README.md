@@ -65,9 +65,6 @@ The project uses 3 main sets of data:
 
 The usage of each of these is summarised in the chart below. Many of the functions in extract have a 'generate/write/read' capability meaning they generate the full data on the first cold run and return the stored filtered data from the data on subsequent runs. This is indicated by the hollow arrows in the chart below. Some of the functions can take long to generate, for example generating the weather data and Neural Network data for the top 50 airports can take up to an hour each. For capstone graders, reduced versions of the the filtered datasets are provided in the readme.txt. For potential legal reasons they are not provided publically in this repository.
 
-![function chart of extraction](https://github.com/ConstantinosAr/Air-traffic-delays-prediction-model/blob/updateReadme/docs/funcChart.png)
-
-
 ![function chart of extraction](/docs/funcChart.png)
 
 
