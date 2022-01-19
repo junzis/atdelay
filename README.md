@@ -68,7 +68,7 @@ The usage of each of these is summarised in the chart below. Many of the functio
 ![function chart of extraction](/docs/funcChart.png)
 
 
-#### Filetree
+#### File structure
 Your file tree should look something like this:
 ```
 Air-traffic-delays-prediction-model
