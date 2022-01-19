@@ -7,6 +7,10 @@ data/
 LRData
 __pycache__
 testFolder/
-test.py
 logs/
 test.ipynb
+*.xml
+.idea
+*.grib
+.idea/workspace.xml
+test.py

@@ -52,7 +52,7 @@ def filtering_data_onehot(
     y = df_capacity["ArrivalDelay"].to_numpy()
 
     if save_to_csv:
-        pd.DataFrame((df_3)).to_csv("data/finaldf.csv", header=False, index=False)
+        pd.DataFrame((df_3)).to_csv("data/finaldf.csv", header=True, index=False)
         pd.DataFrame((X_final)).to_csv("data/xdata.csv", header=False, index=False)
         print("-------Regression model DataFrame to .csv: DONE-------")
         pd.DataFrame((y)).to_csv("data/ydata.csv", header=False, index=False)
@@ -141,7 +141,7 @@ def time_distance(P: pd.DataFrame):
     Returns:
         pd.DataFrame: Same dataframe but with a new column 'flight_time'.
     """
-    P = P.assign(distance=lambda row: haversine(row), axis=1)
+    P = P.assign(distance=lambda row: haversine(row))
     P["flight_time"] = P.apply(
         lambda row: (row["FiledAT"] - row["FiledOBT"]).seconds / 60, axis=1
     )
@@ -161,7 +161,8 @@ def haversine(*P: pd.DataFrame):
     Returns:
         pd.DataFrame: Dataframe of LRData with extra column 'distance'
     """
-    if isinstance(P, pd.DataFrame):
+    if isinstance(P[0], pd.DataFrame):
+        P = P[0]
         coords_a, coords_b = (P["ADEPLong"], P["ADEPLat"]), (
             P["ADESLong"],
             P["ADESLat"],
