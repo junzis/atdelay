@@ -43,7 +43,7 @@ dform = "%Y-%m-%d %H:%M:%S"
 # print("finding parameters for KNN...")
 
 predictions = {}
-filtering_data_onehot('./LRData/LRDATA.csv', datetime(2019, 3, 1), datetime(2019, 12, 31), 'EGLL')
+filtering_data_onehot('./LRData/LRDATA.csv', datetime(2019, 3, 1), datetime(2019, 12, 31), 'EGLL', True)
 print("reading data...")
 X = pd.read_csv("./tools/xdata.csv", header= None).to_numpy()
 Y = pd.read_csv("./tools/ydata.csv", header= None).to_numpy()

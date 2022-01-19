@@ -45,7 +45,9 @@ def extractData(
     listOfFiles = []
     for year in years:
         # Dank file selection https://pynative.com/python-glob/
-        listOfFiles.extend(glob(f"{folderName}\\{year}/*/Flights_2*.csv*"))
+        listOfFiles.extend(glob(f"{folderName}/{year}/*/Flights_2*.csv*"))
+    
+        print(glob(f"{folderName}/{year}/*/Flights_2*.csv*"))
 
     finalData = pd.DataFrame()
 
