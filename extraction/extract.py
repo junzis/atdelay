@@ -276,6 +276,7 @@ def generateNNdata(
              (["timeslot", "visibility", "windspeed",\
                "temperature", "frozenprecip", \
                "surfaceliftedindex", "cape"]). Defaults to True.
+
         saveFolder (str, optional): folder to save data in. Defaults to "NNData".
         catagoricalFlightDelay (bool, optional): If false, flight delay is presented as average.\
              If True it is generated as bins from 0-3, 3-6 and >6. Defaults to False.
@@ -453,6 +454,7 @@ def generateNNdata(
     if disableWeather:
         Pagg = Pagg.drop(
             [
+
                 "visibility",
                 "windspeed",
                 "temperature",
