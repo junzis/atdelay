@@ -366,7 +366,7 @@ def generateNNdata(
         else:
             airportCapacity = 60  # this is a common value
 
-        # weatherData = fetch_weather_data(airport, timeslotLength)
+        weatherData = fetch_weather_data(airport, timeslotLength)
 
         ### get aggregate features for rolling window
         Pagg = (
