@@ -127,7 +127,7 @@ The project features 4 main end-user functions to process raw EUROCONTROL data (
 ### Individual flight prediction
 A Random Forest regression model was used to obtain delays at individual airports. Features such as airline, planned arrival time and airport capacity were used as input to predict the target variable, which is *arrival delay*. 
 
-TODO EDIT THIS SECTION
+To obtain the Random Forest model, you can run the notebook RandomForest.ipynb. During the first run, two arrays will be generated containing the features and labels. If desired, these arrays can be saved in a csv file by specifying ``` save_to_csv = True ```. Then, in the next cell the first line can be uncommented to load in these arrays. By running the subsequent cells, the model will be tuned and its accuracy will be provided, along with several plots.
 
 ### Single airport prediction
 TODO EDIT THIS SECTION
