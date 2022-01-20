@@ -31,6 +31,10 @@ The models are showcased in their respective jupyter notebooks.
 Additionally, supporting functions have been created to process the data and visualise it. Most of the central data processing is done in the extraction module.
 
 ## Installation steps
+Please retrieve the repository through git to run it:
+```
+git clone https://github.com/ConstantinosAr/Air-traffic-delays-prediction-model.git
+```
 ### Note on documentation
 Please note that **all** functions in the repository include an in-depth docstring that explains the function and its parameters. To showcase the work done, jupyter notebooks have been created, explanation on the processes to achieve results are explained there.
 ### Prerequisite packages
@@ -38,6 +42,25 @@ This project requires a significant amount of packages to work, including tensor
 ```
 pip install -r requirements.txt
 ```
+
+#### Manual installation
+If you would like to install the packages manually it can be done with:
+```
+pip install matplotlib networkx numpy pandas requests scikit_learn scipy seaborn spektral tensorflow tqdm xarray
+```
+The project has been tested to work with the following versions of these libraries:
+- matplotlib>=3.4.2
+- networkx>=2.6.3
+- numpy>=1.22.1
+- pandas>=1.3.3
+- requests>=2.23.0
+- scikit_learn>=1.0.2
+- scipy>=1.5.0
+- seaborn>=0.11.1
+- spektral>=1.0.8
+- tensorflow>=2.7.0
+- tqdm>=4.46.0
+- xarray>=0.20.2
 ### Configuring Tensorflow GPU functionality. (Optional)
 Training neural networks and in particular Graph Neural Networks tends to be quite slow. We therefore also recommend configuring tensorflow to work with a graphics card (CUDA compatible NVIDIA GPU required). To do this some additional dependancies should be installed (see Tensorflow GPU guide). Importantly, all the versions should be compatible. Figuring out which versions to install can be tricky. At the time of submission, the following versions were used and should be compatible:
 
@@ -53,17 +76,9 @@ Details on where to find and how to install the the dependencies can be found he
 - [cudnn install guide](https://docs.nvidia.com/deeplearning/cudnn/install-guide/index.html#install-windows)
 
 
-TODO:
-
-You can install the package by running the following command in the command prompt:
-```
-pip install Air-traffic-delays-prediction-model or something like this
-```
-
-
 ### Acquiring the data 
 The project uses 3 main sets of data:
-- Flights data, provided by EUROCONTROL - (TODO ADD LINK FOR GENERAL AUDIENCE) (For graders of the capstone project this is provided in the readme.txt)
+- Flights data, provided by [EUROCONTROL](https://www.eurocontrol.int/dashboard/rnd-data-archive) -  (For graders of the capstone project this is provided in the readme.txt)
 - Weather data provided by [NCEI](https://www.ncei.noaa.gov/) - retrieved by the programme automatically.
 - Airport information (Coordinates etc) - provided in the repository for the Europe's top 50 airports.
 
@@ -102,7 +117,10 @@ Air-traffic-delays-prediction-model
 
 ## Extraction
 
-TODO TALK ABOUT SOME OF THE FUNCTIONS IN THE FLOW CHART
+The project features 4 main end-user functions to process raw EUROCONTROL data (See also the chart above):
+- linearRegressionFormat() - filters flight data to only flights relevant to the [**Individual flight prediction**](#individual-flight-prediction). This is featured in the Randomforest jupyter notebook.
+- generateNNdata() and a multi-airport wrapper generateNNdataMultiple() - aggregates flight data into timeslots and generates some engineered features. This is used in [**Single airport prediction**](#single-airport-prediction) and [**Graph Neural Network**](#graph-neural-network). The ExtractNN jupyter notebook showcases the use of these functions
+- getAdjacencyMatrix() and distance_weight_adjacency() - generate different forms of adjacency matrices used in [**Graph Neural Network**](#graph-neural-network).
 
 ## Models
 ### Individual flight prediction
