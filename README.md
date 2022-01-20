@@ -84,6 +84,7 @@ The project uses 3 main sets of data:
 
 The usage of each of these is summarised in the chart below. Many of the functions in extract have a 'generate/write/read' capability meaning they generate the full data on the first cold run and return the stored filtered data from the data on subsequent runs. This is indicated by the hollow arrows in the chart below. Some of the functions can take long to generate, for example generating the weather data and Neural Network data for the top 50 airports can take up to an hour each. For capstone graders, reduced versions of the the filtered datasets are provided in the readme.txt. For potential legal reasons they are not provided publically in this repository.
 
+#### Extraction chart
 ![function chart of extraction](/docs/funcChart.png)
 
 
@@ -117,7 +118,7 @@ Air-traffic-delays-prediction-model
 
 ## Extraction
 
-The project features 4 main end-user functions to process raw EUROCONTROL data (See also the chart above):
+The project features 4 main end-user functions to process raw EUROCONTROL data (See [**the extraction chart**](#extraction-chart)):
 - linearRegressionFormat() - filters flight data to only flights relevant to the [**Individual flight prediction**](#individual-flight-prediction). This is featured in the Randomforest jupyter notebook.
 - generateNNdata() and a multi-airport wrapper generateNNdataMultiple() - aggregates flight data into timeslots and generates some engineered features. This is used in [**Single airport prediction**](#single-airport-prediction) and [**Graph Neural Network**](#graph-neural-network). The ExtractNN jupyter notebook showcases the use of these functions
 - getAdjacencyMatrix() and distance_weight_adjacency() - generate different forms of adjacency matrices used in [**Graph Neural Network**](#graph-neural-network).
