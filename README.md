@@ -131,7 +131,7 @@ To obtain the Random Forest model, you can run the notebook RandomForest.ipynb. 
 
 ### Single airport prediction
 
-In order to access the code for the single airport prediction (for incoming aircraft's arrival delays and for departing aircraft's departure delays), the user should access the file named LSTM_model.ipynb. This file consists of a Jupyter notebook sontaining cells for the separate parts of the code, such as generating the data, formatting the data, creating the model etc. For each cell, there are accompanying explanations which are meant to provide the user with the necessary information for understanding how the code is organised and how it works. 
+In order to access the code for the single airport prediction (for incoming aircraft's arrival delays and for departing aircraft's departure delays), the user should access the file named LSTM_model.ipynb. This file consists of a Jupyter notebook containing cells for the separate parts of the code, such as generating the data, formatting the data, creating the model etc. For each cell, there are accompanying explanations which are meant to provide the user with the necessary information for understanding how the code is organised and how it works. 
 
 ### Graph Neural Network
 
