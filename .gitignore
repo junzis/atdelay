@@ -15,3 +15,4 @@ merge_ignore/
 .idea/workspace.xml
 test.py
 logs/
+.ipynb_checkpoints/
