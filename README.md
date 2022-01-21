@@ -130,7 +130,8 @@ A Random Forest regression model was used to obtain delays at individual airport
 To obtain the Random Forest model, you can run the notebook RandomForest.ipynb. During the first run, two arrays will be generated containing the features and labels. If desired, these arrays can be saved in a csv file by specifying ``` save_to_csv = True ```. Then, in the next cell the first line can be uncommented to load in these arrays. By running the subsequent cells, the model will be tuned and its accuracy will be provided, along with several plots.
 
 ### Single airport prediction
-TODO EDIT THIS SECTION
+
+In order to access the code for the single airport prediction (for incoming aircraft's arrival delays and for departing aircraft's departure delays), the user should access the file named LSTM_model.ipynb. This file consists of a Jupyter notebook sontaining cells for the separate parts of the code, such as generating the data, formatting the data, creating the model etc. For each cell, there are accompanying explanations which are meant to provide the user with the necessary information for understanding how the code is organised and how it works. 
 
 ### Graph Neural Network
 
