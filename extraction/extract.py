@@ -589,21 +589,37 @@ def show_raw_visualization(P: pd.DataFrame, date_time_key="timeslot"):
     plt.tight_layout()
 
 
-def generateKeplerAirports(
-    airports,
-    start,
-    end,
-    timeslotLength,
+def generateKeplerData(
+    airports: list = ICAOTOP10,
+    start: datetime = datetime(2019, 3, 1),
+    end: datetime = datetime(2019, 4, 1),
+    timeslotLength: int = 60,
     availableMonths: list = [3, 6, 9, 12],
     val_idx: int = 0,
     predictions: list = [],
     actual: list = [],
-):  # TO BE FINISHED
+):
+    """Function to generate the data for the Kepler gl demo
+
+    Args:
+        airports (list, optional): airports to generate data for. Defaults to ICAOTOP10.
+        start (datetime, optional): start date of the data, should be same as in ST-GCN. Defaults to datetime(2019, 3, 1).
+        end (datetime, optional): end date of the data, should be the same as in the ST-GCN. Defaults to datetime(2019, 4, 1).
+        timeslotLength (int, optional): lenght of one timeslot in minutes. Defaults to 60.
+        availableMonths (list, optional): months of data available. Defaults to [3, 6, 9, 12].
+        val_idx (int, optional): index of the first test label in the dataset of the ST-GCN. Defaults to 0.
+        predictions (list, optional): Predicted labels. Defaults to [].
+        actual (list, optional): Real labels. Defaults to [].
+
+    Returns:
+        pd.DataFrame: dataframe will all data ready for the Kepler gl
+
+    """
     final = pd.DataFrame()
+    flights_all = pd.DataFrame()
     for airport in tqdm(airports):
+
         P = generalFilterAirport(start, end, airport)
-        P["arriving"] = P.ADES == airport
-        P["departing"] = P.ADEP == airport
         P["lowcost"] = P.FlightType != "Traditional Scheduled"
         P["Traditional Scheduled"] = P.FlightType == "Traditional Scheduled"
 
@@ -612,11 +628,39 @@ def generateKeplerAirports(
         P["departing"] = P.ADEP == airport
 
         # Collect the time at which the flights are meant to be at the airport
-        P.loc[(P.arriving == True), "timeAtAirport"] = P.FiledAT
-        P.loc[(P.arriving == False), "timeAtAirport"] = P.FiledOBT
+        P.loc[(P.arriving == True), "Timeslot"] = P.FiledAT
+        P.loc[(P.arriving == False), "Timeslot"] = P.FiledOBT
 
         P.loc[(P.arriving == False), "departuresDepartureDelay"] = P.DepartureDelay
         P.loc[(P.arriving == True), "arrivalsArrivalDelay"] = P.ArrivalDelay
+
+        flights_data = P.copy()
+        flights_data = flights_data.drop(
+            [
+                "ECTRLID",
+                "FiledOBT",
+                "FiledAT",
+                "ActualOBT",
+                "ActualDistanceFlown",
+                "arriving",
+                "departing",
+                "ArrivalDelay",
+                "DepartureDelay",
+                "departuresDepartureDelay",
+                "arrivalsArrivalDelay",
+                "ActualAT",
+                "ACType",
+                "ACOperator",
+                "FlightType",
+                "Traditional Scheduled",
+                "lowcost",
+            ],
+            axis=1,
+        )
+        # print(flights_data.head())
+
+        flights_all = flights_all.append(flights_data)
+
         # This creates a new index to ensure that we have no gaps in the timeslots later
         def daterange(start_date, end_date):
             delta = timedelta(minutes=timeslotLength)
@@ -628,8 +672,11 @@ def generateKeplerAirports(
                 start_date += delta
 
         denseDateIndex = daterange(start, end)
+
+        # Calculate date of first predicted value
         num_minutes = timeslotLength * val_idx
-        first_test = start + timedelta(minutes=num_minutes)
+        start_date = start + timedelta(minutes=num_minutes)
+
         # Functionality for airports outside of the top50
         if airport in list(airport_dict.keys()):
             airportCapacity = airport_dict[airport]["capacity"]
@@ -640,7 +687,7 @@ def generateKeplerAirports(
         Pagg = (
             P.groupby(
                 [
-                    pd.Grouper(key="timeAtAirport", freq=f"{timeslotLength}min"),
+                    pd.Grouper(key="Timeslot", freq=f"{timeslotLength}min"),
                 ]
             )
             .agg(
@@ -656,164 +703,48 @@ def generateKeplerAirports(
             .reindex(denseDateIndex, fill_value=0)
             # Engineering some features
             .reset_index()
-            .rename(columns={"timeAtAirport": "timeslot"})
+            .rename(
+                columns={
+                    "departing": "# Departing flights",
+                    "arriving": "# Arriving flights",
+                    "lowcost": "# Lowcost flights",
+                    "Traditional Scheduled": "# Traditional flights",
+                }
+            )
             .round(2)
-            # Add weather data
             .fillna(0)
-            .query("`timeslot` >= @start & `timeslot` < @end")
-            .query("timeslot >= @first_test")
+            .query("`Timeslot` >= @start_date & `Timeslot` < @end")
             .assign(airport=lambda x: airport)
-            .assign(latitude=lambda x: airport_dict[airport]["latitude"])
-            .assign(longitude=lambda x: airport_dict[airport]["longitude"])
         )
         airport_idx = airports.index(airport)
-        pred_arrival = [round(x[airport_idx],1) for x in predictions]
+        pred_arrival = [np.round(x[airport_idx], 1) for x in predictions]
+        # pred_departing = [round(x[airport_idx], 1) for x in predictions]
         error = []
         for i in range(0, len(predictions)):
-            error.append(round(abs(predictions[i][airport_idx] - actual[i][airport_idx]),1))
-        Pagg["arrivaldelay"] = pred_arrival
-        Pagg["Error"] = error
+            error.append(
+                np.round(abs(predictions[i][airport_idx] - actual[i][airport_idx]), 1)
+            )
+        Pagg["Arrival delay"] = pred_arrival
+        # Pagg["Departure delay"] = pred_departing
+        Pagg["Mean squared error"] = error
         final = final.append(Pagg)
 
     if not os.path.exists("keplerData"):
-            os.makedirs("keplerData")
+        os.makedirs("keplerData")
 
-    # P = generateKeplerFlightsMultiple(airports, first_test,end,timeslotLength, save_to_csv=True)
-    # final = final.merge(P, how="left", on="timeslot")
+    # print(flights_all.head())
+    flights_all = flights_all.assign(airport=lambda x: x.ADES).query(
+        "`ADEP` in @airports & `ADES` in @airports"
+    )
+
+    # print(Pagg.head())
+    final = final.merge(flights_all, how="left", on=["airport", "Timeslot"])  # .drop(
+    #     ["Unnamed: 0_x", "Unnamed: 0_y", "latitude", "longitude"], axis=1
+    # )
     final.to_csv(
-            f"keplerData/TEST_ICAOTOP{len(airports)}_{timeslotLength}m_{start.strftime('%Y%m%d')}_{end.strftime('%Y%m%d')}.csv"
-        )
-    
-    ###########ADD stuff from results from ST-GCN
-
-    return final
-
-
-def generateKeplerFlights(
-    airport: str = "EHAM",
-    start: datetime = datetime(2019, 1, 1),
-    end: datetime = datetime(2019, 3, 1),
-    timeslotLength: int = 15,
-    availableMonths: list = [3, 6, 9, 12],
-    save_to_csv: bool = False,
-    saveFolder: str = "keplerData",
-):
-    """Function to generate flight data for Kepler visualization of 1 airport
-
-    Args:
-        airport (str, optional): Airport to generate data for. Defaults to "EHAM".
-        start (datetime, optional): Start date for data generation. Defaults to datetime(2019, 1, 1).
-        end (datetime, optional): End date for data generation. Defaults to datetime(2019, 3, 1).
-        timeslotLength (int, optional): Length of each timeslot of the day. Defaults to 15.
-        availableMonths (list, optional): list of months available in eurocontrol. Defaults to [3, 6, 9, 12].
-        save_to_csv (bool, optional): Specify if data needs to be saved in a CSV file. Defaults to False.
-        saveFolder (str, optional): Specify which folder data needs to be saved to when requested. Defaults to "keplerData".
-
-    Returns:
-        [type]: [description]
-
-    Yields:
-        [type]: [description]
-    """
-    P = generalFilterAirport(start, end, airport)
-
-    # Are flights arriving or departing?
-    P["arriving"] = P.ADES == airport
-    P["departing"] = P.ADEP == airport
-
-    # Collect the time at which the flights are meant to be at the airport
-    P.loc[(P.arriving == True), "timeAtAirport"] = P.FiledAT
-    P.loc[(P.arriving == False), "timeAtAirport"] = P.FiledOBT
-
-    P.loc[(P.arriving == False), "departuresDepartureDelay"] = P.DepartureDelay
-    P.loc[(P.arriving == True), "arrivalsArrivalDelay"] = P.ArrivalDelay
-
-    # Created column with rounded time at airport to nearest timeslot
-    P["timeslot"] = P["timeAtAirport"].dt.round(str(timeslotLength) + "min")
-    P["Arr/Dep"] = P["ADES"].apply(
-        lambda x: "Arriving" if x == airport else "Departing"
-    )
-    # This creates a new index to ensure that we have no gaps in the timeslots later
-    def daterange(start_date, end_date):
-        delta = timedelta(minutes=timeslotLength)
-        while start_date < end_date:
-            if start_date.month in availableMonths:
-                # Only yields the months for which we have
-                # data specified in the argument availableMonths
-                yield start_date
-            start_date += delta
-
-    denseDateIndex = daterange(start, end)
-
-    P = P.drop(
-        [
-            "ECTRLID",
-            "FiledOBT",
-            "FiledAT",
-            "ActualOBT",
-            "ActualDistanceFlown",
-            "arriving",
-            "departing",
-            "timeAtAirport",
-            "ArrivalDelay",
-            "DepartureDelay",
-            "departuresDepartureDelay",
-            "arrivalsArrivalDelay",
-            "ActualAT",
-            "ACType",
-            "ACOperator",
-        ],
-        axis=1,
+        f"keplerData/Total_ICAOTOP{len(airports)}_{timeslotLength}m_{start_date.strftime('%Y%m%d')}_{end.strftime('%Y%m%d')}.csv"
     )
 
-
-    if save_to_csv:
-        if not os.path.exists(saveFolder):
-            os.makedirs(saveFolder)
-
-        P.to_csv(
-            f"{saveFolder}/visual_{airport}_{timeslotLength}m_{start.strftime('%Y%m%d')}_{end.strftime('%Y%m%d')}.csv"
-        )
-
-    return P
-
-
-def generateKeplerFlightsMultiple(
-    airports: list = ICAOTOP10,
-    start: datetime = datetime(2019, 1, 1),
-    end: datetime = datetime(2019, 3, 1),
-    timeslotLength: int = 15,
-    save_to_csv: bool = False,
-    saveFolder: str = "keplerData",
-):
-    """Function to generate the flight data for the visualization in Kepler for multiple airports
-
-    Args:
-        airports (list, optional): Airports to create data for. Defaults to ICAOTOP10.
-        start (datetime, optional): Start date for data generation. Defaults to datetime(2019, 1, 1).
-        end (datetime, optional): End date for data generation. Defaults to datetime(2019, 3, 1).
-        timeslotLength (int, optional): Length of each timeslot of the day . Defaults to 15.
-        save_to_csv (bool, optional): Specify if data needs to be saved in a CSV file. Defaults to False.
-        saveFolder (str, optional): Specify which folder data needs to be saved to when requested. Defaults to "keplerData".
-
-    Returns:
-        pd.Dataframe: Dataframe with the created data
-    """
-    final = pd.DataFrame()
-    for airport in tqdm(airports):
-        P = generateKeplerFlights(airport, start, end, timeslotLength)
-        final = final.append(P)
-    final = final.query("`ADEP` in @airports & `ADES` in @airports")
-    # final = (final.groupby(by="timeslot"))
-
-    if save_to_csv:
-        # filename =
-        if not os.path.exists(saveFolder):
-            os.makedirs(saveFolder)
-
-        final.to_csv(
-            f"{saveFolder}/visual_ICAOTOP{len(airports)}_{timeslotLength}m_{start.strftime('%Y%m%d')}_{end.strftime('%Y%m%d')}.csv"
-        )
     return final
 
 
