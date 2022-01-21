@@ -1,14 +1,12 @@
 from datetime import datetime
 import os
-import sys
-from typing import final
 import numpy as np
 import pandas as pd
 import xarray as xr
 import matplotlib.pyplot as plt
 import requests
 from tqdm import tqdm
-from airportvalues import airport_dict
+from extraction.airportvalues import airport_dict
 from glob import glob
 
 
@@ -80,8 +78,7 @@ def fetch_grb(year, month, day, hour, pred=0, plot_data: bool = False):
     """
     datadir = "./data/grib/"
     if not os.path.exists(datadir):
-        print("COULD NOT FIND GRIB FOLDER")
-        return -1
+        os.mkdir(os.path.join(datadir))
 
     windgfs_url = "https://www.ncei.noaa.gov/data/global-forecast-system/access/historical/analysis/"
     ym = "%04d%02d" % (year, month)
@@ -253,14 +250,15 @@ def fetch_weather_data(airport: str, interval: int, years: list = [2019, 2018]):
 
     Returns:
         pd.DataFrame: dataframe with weather data for years that were assigned
-        vis         =  Visibility [m]
-        gust        =  Wind speed [m/s]
-        t           =  Temperature [K]
-        cpofp       =  Prob. of frozen precipitation [%] 
-        lftx        =  Surface lifted index [K] 
+        Features are as follows:
+        visibility         =  vis         =  Visibility [m]
+        windspeed          =  gust        =  Wind speed [m/s]
+        temperature        =  t           =  Temperature [K]
+        frozenprecip       =  cpofp       =  Prob. of frozen precipitation [%]
+        surfaceliftedindex =  lftx        =  Surface lifted index [K]
         (The lifted index (LI) is the temperature difference between the environment Te(p) and an air parcel lifted adiabatically Tp(p) at a given pressure height in the troposphere (lowest layer where most weather occurs) of the atmosphere, usually 500 hPa (mb). The temperature is measured in Celsius. When the value is positive, the atmosphere (at the respective height) is stable and when the value is negative, the atmosphere is unstable.)
-        cape        =  Convective available potential energy [J/kg]
-        (In meteorology, convective available potential energy (commonly abbreviated as CAPE), is the integrated amount of work that the upward (positive) buoyancy force would perform on a given mass of air (called an air parcel) if it rose vertically through the entire atmosphere. At high values of cape (1000+)  there is a high probability of heavy thunderstorms) 
+        cape               =  cape        =  Convective available potential energy [J/kg]
+        (In meteorology, convective available potential energy (commonly abbreviated as CAPE), is the integrated amount of work that the upward (positive) buoyancy force would perform on a given mass of air (called an air parcel) if it rose vertically through the entire atmosphere. At high values of cape (1000+)  there is a high probability of heavy thunderstorms)
 
     """
 
@@ -292,29 +290,24 @@ def fetch_weather_data(airport: str, interval: int, years: list = [2019, 2018]):
         df = pd.read_csv(fileloc, header=0)
         final_df = final_df.append(df, ignore_index=True)
 
-    final_df = final_df.assign(
-        timeslot=lambda x: pd.to_datetime(x.time, format=dform)
-    ).drop("time", axis=1)
+    final_df = (
+        final_df.assign(timeslot=lambda x: pd.to_datetime(x.time, format=dform))
+        .drop("time", axis=1)
+        .rename(
+            columns={
+                "vis": "visibility",
+                "gust": "windspeed",
+                "t": "temperature",
+                "cpofp": "frozenprecip",
+                "lftx": "surfaceliftedindex",
+                "cape": "cape",
+            }
+        )
+        .set_index("timeslot")
+    )
+
     return final_df
 
 
 if __name__ == "__main__":
-    # for month in [3, 6, 9, 12]:
-    #     for day in tqdm(range(1, 31)):
-    #         for hour in [0, 6, 12, 18]:
-    #             fetch_grb(2018, month, day, hour)
-
-    # basic_data_reader('./data/Schiphol_Weather_Data.grib')
-
-    # type_data = 't'
-    # for month2 in [3, 6, 9, 12]:
-    #     for day in range(1, 31):
-    #         for hour in [0, 6, 12, 18]:
-    #             basic_data_reader(f'./data/Weather_Data_Filtered/{type_data}/2019/{type_data}_{2019}_{month2}_{day}_{hour}.npy', type_data, 50 +273.15, -20 + 273.15)
-
-    # npy_to_df(2019, 15)
-
-    a = fetch_weather_data("EBBR", 15, [2019])
-    print(a)
-    print(a.dtypes)
     pass

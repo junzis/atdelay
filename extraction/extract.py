@@ -6,7 +6,7 @@ from tqdm import tqdm
 import matplotlib.pyplot as plt
 from extraction.extractionvalues import *
 from extraction.airportvalues import *
-
+from extraction.weather import fetch_weather_data
 
 
 def extractData(
@@ -46,8 +46,6 @@ def extractData(
     for year in years:
         # Dank file selection https://pynative.com/python-glob/
         listOfFiles.extend(glob(f"{folderName}/{year}/*/Flights_2*.csv*"))
-    
-        print(glob(f"{folderName}/{year}/*/Flights_2*.csv*"))
 
     finalData = pd.DataFrame()
 
@@ -118,7 +116,7 @@ def calculateDelays(P: pd.DataFrame, delayTypes: list = ["arrival", "departure"]
     P = P.query(
         "ArrivalDelay < 90 & ArrivalDelay > -30 & DepartureDelay < 90 & DepartureDelay > -30 "
     )
-    
+
     return P
 
 
@@ -201,6 +199,7 @@ def readLRDATA(saveFolder: str = "LRData", fileName: str = "LRDATA.csv"):
     P = pd.read_csv(fullfilename, header=0, index_col=0)
     return P
 
+
 def generalFilterAirport(
     start: datetime,
     end: datetime,
@@ -257,6 +256,7 @@ def generateNNdata(
     airport: str,
     timeslotLength: int = 15,
     GNNFormat: bool = False,
+    disableWeather: bool = True,
     saveFolder: str = "NNData",
     catagoricalFlightDuration: bool = False,
     forceRegenerateData: bool = False,
@@ -264,20 +264,29 @@ def generateNNdata(
     end: datetime = datetime(2019, 12, 31),
     startDefault=datetime(2018, 1, 1),
     endDefault=datetime(2019, 12, 31),
+    availableMonths: list = [3, 6, 9, 12],
 ):
     """Aggregates all flights at a single airport by a certain timeslot.
 
     Args:
         airport (str): ICAO code for a single airport
         timeslotLength (int, optional): length to aggregate flights for in minutes. Defaults to 15 minutes.
+        GNNFormat: (bool, optional): returns the data in format used for GNN model (Pagg, Y, T). Defaults to False
+        disableWeather: (bool, optional): disables weather features:\
+             (["timeslot", "visibility", "windspeed",\
+               "temperature", "frozenprecip", \
+               "surfaceliftedindex", "cape"]). Defaults to True.
+
         saveFolder (str, optional): folder to save data in. Defaults to "NNData".
         catagoricalFlightDelay (bool, optional): If false, flight delay is presented as average.\
              If True it is generated as bins from 0-3, 3-6 and >6. Defaults to False.
         forceRegenerateData (bool, optional): force regeneration of data even if it had already been generated. Defaults to False.
-        start (datetime, optional): start date to filter for
-        end (datetime, optional): end date to filter for
-        startDefault (datetime, optinoal): start date for the csv
-        endDefault (datetime, optinoal): end date for the csv
+        start (datetime, optional): start date to filter for.
+        end (datetime, optional): end date to filter for.
+        startDefault (datetime, optinoal): start date to generate full data. Defaults to datetime(2019, 1, 31)
+        endDefault (datetime, optinoal): end date to generate full data. Defaults to datetime(2019, 12, 31)
+        availableMonths (list, optional): list of months available in \
+            eurocontrol. Defaults to [March, June, September, December]
     Returns:
         pd.Dataframe: pandas dataframe with aggregate flight data, unscaled.
     """
@@ -341,9 +350,21 @@ def generateNNdata(
         def daterange(start_date, end_date):
             delta = timedelta(minutes=timeslotLength)
             while start_date < end_date:
-                yield start_date
+                if start_date.month in availableMonths:
+                    # Only yields the months for which we have
+                    # data specified in the argument availableMonths
+                    yield start_date
                 start_date += delta
-        denseDateIndex = daterange(start, end)
+
+        denseDateIndex = daterange(startDefault, endDefault)
+
+        # Functionality for airports outside of the top50
+        if airport in list(airport_dict.keys()):
+            airportCapacity = airport_dict[airport]["capacity"]
+        else:
+            airportCapacity = 60  # this is a common value
+
+        weatherData = fetch_weather_data(airport, timeslotLength)
 
         ### get aggregate features for rolling window
         Pagg = (
@@ -379,8 +400,7 @@ def generateNNdata(
             .assign(runways=lambda x: numRunways)
             .assign(gates=lambda x: numGates)
             .assign(
-                capacityFilled=lambda x: (x.arriving + x.departing)
-                / airport_dict[airport]["capacity"]
+                capacityFilled=lambda x: (x.arriving + x.departing) / airportCapacity
             )
             .assign(weekend=lambda x: x.index.weekday >= 5)
             .assign(winter=lambda x: (x.index.month > 11) | (x.index.month < 3))
@@ -394,6 +414,8 @@ def generateNNdata(
             .drop(["runways", "gates"], axis=1)  # Temp measure until we add weather
             .reset_index()
             .rename(columns={"timeAtAirport": "timeslot"})
+            # Add weather data
+            .merge(weatherData, how="left", on="timeslot", validate="1:m")
             .fillna(0)
         )
 
@@ -427,8 +449,22 @@ def generateNNdata(
         Pagg = pd.read_csv(filename, header=0, index_col=0)
         Pagg = Pagg.assign(timeslot=lambda x: pd.to_datetime(x.timeslot, format=dform))
 
-    Pagg = Pagg.query("`timeslot` >= @start & `timeslot` <= @end")
-    
+    Pagg = Pagg.query("`timeslot` >= @start & `timeslot` < @end")
+
+    if disableWeather:
+        Pagg = Pagg.drop(
+            [
+
+                "visibility",
+                "windspeed",
+                "temperature",
+                "frozenprecip",
+                "surfaceliftedindex",
+                "cape",
+            ],
+            axis=1,
+        )
+
     if GNNFormat and catagoricalFlightDuration:
         raise ValueError("GNNFormat and catagoricalFlightDuration are not compatible")
 
@@ -453,6 +489,7 @@ def generateNNdataMultiple(
     airports: list,
     timeslotLength: int = 15,
     GNNFormat: bool = False,
+    disableWeather: bool = True,
     saveFolder: str = "NNData",
     forceRegenerateData: bool = False,
     start: datetime = datetime(2018, 1, 1),
@@ -463,9 +500,15 @@ def generateNNdataMultiple(
     Args:
         airports (list): list of ICAO airport codes
         timeslotLength (int, optional): length to aggregate flights for in minutes. Defaults to 15 minutes.
+        GNNFormat: (bool, optional): returns the data in format used for GNN model (Pagg, Y, T). Defaults to False
+        disableWeather: (bool, optional): disables weather features:\
+                        (["timeslot", "visibility", "windspeed",\
+                        "temperature", "frozenprecip", \
+                        "surfaceliftedindex", "cape"]). Defaults to True.
         saveFolder (str, optional): folder to save data in. Defaults to "NNData".
         forceRegenerateData (bool, optional): force regeneration of data even if it had already been generated. Defaults to False.
-
+        start (datetime, optional): start date to filter for.
+        end (datetime, optional): end date to filter for.
 
     Returns:
         dict: dictionary of NN data dataframes
@@ -476,6 +519,7 @@ def generateNNdataMultiple(
             airport,
             timeslotLength,
             GNNFormat,
+            disableWeather,
             saveFolder,
             forceRegenerateData,
             start=start,
@@ -546,4 +590,3 @@ def show_raw_visualization(P: pd.DataFrame, date_time_key="timeslot"):
 
 if __name__ == "__main__":
     pass
-

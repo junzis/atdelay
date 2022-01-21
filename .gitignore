@@ -14,3 +14,4 @@ merge_ignore/
 *.grib
 .idea/workspace.xml
 test.py
+logs/
