@@ -8,7 +8,6 @@ from extraction.extractionvalues import *
 from extraction.airportvalues import *
 from extraction.weather import fetch_weather_data
 
-# from exextractadjacency import filterAirports
 import numpy as np
 
 
@@ -595,7 +594,6 @@ def generateKeplerData(
     end: datetime = datetime(2019, 4, 1),
     timeslotLength: int = 60,
     availableMonths: list = [3, 6, 9, 12],
-    val_idx: int = 0,
     predictions: list = [],
     actual: list = [],
 ):
@@ -607,7 +605,6 @@ def generateKeplerData(
         end (datetime, optional): end date of the data, should be the same as in the ST-GCN. Defaults to datetime(2019, 4, 1).
         timeslotLength (int, optional): lenght of one timeslot in minutes. Defaults to 60.
         availableMonths (list, optional): months of data available. Defaults to [3, 6, 9, 12].
-        val_idx (int, optional): index of the first test label in the dataset of the ST-GCN. Defaults to 0.
         predictions (list, optional): Predicted labels. Defaults to [].
         actual (list, optional): Real labels. Defaults to [].
 
@@ -615,8 +612,8 @@ def generateKeplerData(
         pd.DataFrame: dataframe will all data ready for the Kepler gl
 
     """
-    final = pd.DataFrame()
-    flights_all = pd.DataFrame()
+    airports_data = pd.DataFrame() # Dataframe for data of all the airports
+    flights_all = pd.DataFrame() # Dataframe for all flight data
     for airport in tqdm(airports):
 
         P = generalFilterAirport(start, end, airport)
@@ -657,7 +654,6 @@ def generateKeplerData(
             ],
             axis=1,
         )
-        # print(flights_data.head())
 
         flights_all = flights_all.append(flights_data)
 
@@ -672,16 +668,6 @@ def generateKeplerData(
                 start_date += delta
 
         denseDateIndex = daterange(start, end)
-
-        # Calculate date of first predicted value
-        num_minutes = timeslotLength * val_idx
-        start_date = start + timedelta(minutes=num_minutes)
-
-        # Functionality for airports outside of the top50
-        if airport in list(airport_dict.keys()):
-            airportCapacity = airport_dict[airport]["capacity"]
-        else:
-            airportCapacity = 60  # this is a common value
 
         P = P.query("`ADEP` in @airports & `ADES` in @airports")
         Pagg = (
@@ -705,44 +691,46 @@ def generateKeplerData(
             .reset_index()
             .rename(
                 columns={
-                    "departing": "# Departing flights",
-                    "arriving": "# Arriving flights",
+                    "departing": "Total # Departing flights",
+                    "arriving": "Total # Arriving flights",
                     "lowcost": "# Lowcost flights",
                     "Traditional Scheduled": "# Traditional flights",
                 }
             )
             .round(2)
             .fillna(0)
-            .query("`Timeslot` >= @start_date & `Timeslot` < @end")
+            .query("`Timeslot` >= @start & `Timeslot` < @end")
             .assign(airport=lambda x: airport)
         )
+        # Generate lists to capture arrival delay, departure delay and error
         airport_idx = airports.index(airport)
-        pred_arrival = [np.round(x[airport_idx], 1) for x in predictions]
-        # pred_departing = [round(x[airport_idx], 1) for x in predictions]
-        error = []
-        for i in range(0, len(predictions)):
-            error.append(
-                np.round(abs(predictions[i][airport_idx] - actual[i][airport_idx]), 1)
-            )
-        Pagg["Arrival delay"] = pred_arrival
-        # Pagg["Departure delay"] = pred_departing
-        Pagg["Mean squared error"] = error
-        final = final.append(Pagg)
+        pred_arrival = [np.round(x[airport_idx][0], 1) for x in predictions]
+        pred_departing = [np.round(x[airport_idx][1], 1) for x in predictions]
+        mean_error = []
 
+        for i in range(0, len(predictions)):
+            error =  round((abs(predictions[i][airport_idx][0] - actual[i][airport_idx][0]) + abs(predictions[i][airport_idx][1] -actual[i][airport_idx][1]))/2)
+            mean_error.append(error)
+
+        # Add calculations to dataframe
+        Pagg["Arrival delay"] = pred_arrival
+        Pagg["Departure delay"] = pred_departing
+        Pagg["Error"] = mean_error
+        airports_data = airports_data.append(Pagg)
+
+    # Create folder for data
     if not os.path.exists("keplerData"):
         os.makedirs("keplerData")
 
-    # print(flights_all.head())
     flights_all = flights_all.assign(airport=lambda x: x.ADES).query(
         "`ADEP` in @airports & `ADES` in @airports"
     )
 
-    # print(Pagg.head())
-    final = final.merge(flights_all, how="left", on=["airport", "Timeslot"])  # .drop(
-    #     ["Unnamed: 0_x", "Unnamed: 0_y", "latitude", "longitude"], axis=1
-    # )
+    final = airports_data.merge(flights_all, how="left", on=["airport", "Timeslot"]) 
+    final["ADESLat"] = final["airport"].apply(lambda x: airport_dict[x]["latitude"])
+    final["ADESLong"] = final["airport"].apply(lambda x: airport_dict[x]["longitude"])
     final.to_csv(
-        f"keplerData/Total_ICAOTOP{len(airports)}_{timeslotLength}m_{start_date.strftime('%Y%m%d')}_{end.strftime('%Y%m%d')}.csv"
+        f"keplerData/Total_ICAOTOP{len(airports)}_{timeslotLength}m_{start.strftime('%Y%m%d')}_{end.strftime('%Y%m%d')}.csv"
     )
 
     return final
