@@ -6,14 +6,16 @@ import scipy.sparse as sp
 import tensorflow as tf
 import networkx as nx
 from datetime import datetime
+import sys
 
+sys.path.append(".")
 from spektral.data import Dataset, DisjointLoader, Graph
 
 from extraction.extractadjacency import distance_weight_adjacency
 
-from . import generateNNdataMultiple
-from . import getAdjacencyMatrix
-from . import airport_dict
+from extraction.extract import generateNNdataMultiple
+from extraction.extractadjacency import getAdjacencyMatrix
+from extraction.airportvalues import airport_dict
 
 
 class FlightNetworkDataset(Dataset):
@@ -63,6 +65,10 @@ class FlightNetworkDataset(Dataset):
             start=self.start,
             end=self.end,
         )
+
+        # store times for accountability later
+        self._times = (list(dataDict.values())[0]["T"])
+
         flight_adjacency = getAdjacencyMatrix(
             self.airports, self.start, self.end, timeslotLength=self.timeslotLength
         )
@@ -111,12 +117,13 @@ class FlightNetworkDataset(Dataset):
                 round(graph.y[idx][1], 2),
             )
             pos[idx] = [
-                airport_dict[airport]["latitude"],
                 airport_dict[airport]["longitude"],
+                airport_dict[airport]["latitude"],
             ]
             labels[idx] = airport
 
         nx.draw(G, pos)
         node_labels = nx.get_node_attributes(G, "name")
         nx.draw_networkx_labels(G, pos, labels=node_labels)
+        print(f"Plotted time is: {self._times.iloc[nthGraph].values}")
         plt.show()

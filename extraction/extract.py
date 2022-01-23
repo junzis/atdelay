@@ -8,6 +8,8 @@ from extraction.extractionvalues import *
 from extraction.airportvalues import *
 from extraction.weather import fetch_weather_data
 
+import numpy as np
+
 
 def extractData(
     start: datetime = None,
@@ -247,7 +249,7 @@ def generalFilterAirport(
 
     # Actual date filter.
     # Does NOT include flights that departed the night before but arrived within the filter
-    P = P.query("`FiledOBT` >= @start & `FiledAT` <= @end")
+    P = P.query("`FiledOBT` >= @start & `FiledAT` < @end")
 
     return P
 
@@ -276,7 +278,6 @@ def generateNNdata(
              (["timeslot", "visibility", "windspeed",\
                "temperature", "frozenprecip", \
                "surfaceliftedindex", "cape"]). Defaults to True.
-
         saveFolder (str, optional): folder to save data in. Defaults to "NNData".
         catagoricalFlightDelay (bool, optional): If false, flight delay is presented as average.\
              If True it is generated as bins from 0-3, 3-6 and >6. Defaults to False.
@@ -454,7 +455,6 @@ def generateNNdata(
     if disableWeather:
         Pagg = Pagg.drop(
             [
-
                 "visibility",
                 "windspeed",
                 "temperature",
@@ -586,6 +586,154 @@ def show_raw_visualization(P: pd.DataFrame, date_time_key="timeslot"):
         # ax.legend(key)
         ax.grid()
     plt.tight_layout()
+
+
+def generateKeplerData(
+    airports: list = ICAOTOP10,
+    start: datetime = datetime(2019, 3, 1),
+    end: datetime = datetime(2019, 4, 1),
+    timeslotLength: int = 60,
+    availableMonths: list = [3, 6, 9, 12],
+    predictions: list = [],
+    actual: list = [],
+):
+    """Function to generate the data for the Kepler gl demo
+
+    Args:
+        airports (list, optional): airports to generate data for. Defaults to ICAOTOP10.
+        start (datetime, optional): start date of the data, should be same as in ST-GCN. Defaults to datetime(2019, 3, 1).
+        end (datetime, optional): end date of the data, should be the same as in the ST-GCN. Defaults to datetime(2019, 4, 1).
+        timeslotLength (int, optional): lenght of one timeslot in minutes. Defaults to 60.
+        availableMonths (list, optional): months of data available. Defaults to [3, 6, 9, 12].
+        predictions (list, optional): Predicted labels. Defaults to [].
+        actual (list, optional): Real labels. Defaults to [].
+
+    Returns:
+        pd.DataFrame: dataframe will all data ready for the Kepler gl
+
+    """
+    airports_data = pd.DataFrame() # Dataframe for data of all the airports
+    flights_all = pd.DataFrame() # Dataframe for all flight data
+    for airport in tqdm(airports):
+
+        P = generalFilterAirport(start, end, airport)
+        P["lowcost"] = P.FlightType != "Traditional Scheduled"
+        P["Traditional Scheduled"] = P.FlightType == "Traditional Scheduled"
+
+        # Are flights arriving or departing?
+        P["arriving"] = P.ADES == airport
+        P["departing"] = P.ADEP == airport
+
+        # Collect the time at which the flights are meant to be at the airport
+        P.loc[(P.arriving == True), "Timeslot"] = P.FiledAT
+        P.loc[(P.arriving == False), "Timeslot"] = P.FiledOBT
+
+        P.loc[(P.arriving == False), "departuresDepartureDelay"] = P.DepartureDelay
+        P.loc[(P.arriving == True), "arrivalsArrivalDelay"] = P.ArrivalDelay
+
+        flights_data = P.copy()
+        flights_data = flights_data.drop(
+            [
+                "ECTRLID",
+                "FiledOBT",
+                "FiledAT",
+                "ActualOBT",
+                "ActualDistanceFlown",
+                "arriving",
+                "departing",
+                "ArrivalDelay",
+                "DepartureDelay",
+                "departuresDepartureDelay",
+                "arrivalsArrivalDelay",
+                "ActualAT",
+                "ACType",
+                "ACOperator",
+                "FlightType",
+                "Traditional Scheduled",
+                "lowcost",
+            ],
+            axis=1,
+        )
+
+        flights_all = flights_all.append(flights_data)
+
+        # This creates a new index to ensure that we have no gaps in the timeslots later
+        def daterange(start_date, end_date):
+            delta = timedelta(minutes=timeslotLength)
+            while start_date < end_date:
+                if start_date.month in availableMonths:
+                    # Only yields the months for which we have
+                    # data specified in the argument availableMonths
+                    yield start_date
+                start_date += delta
+
+        denseDateIndex = daterange(start, end)
+
+        P = P.query("`ADEP` in @airports & `ADES` in @airports")
+        Pagg = (
+            P.groupby(
+                [
+                    pd.Grouper(key="Timeslot", freq=f"{timeslotLength}min"),
+                ]
+            )
+            .agg(
+                {
+                    "departing": "sum",
+                    "arriving": "sum",
+                    "Traditional Scheduled": "sum",
+                    "lowcost": "sum",
+                }
+            )
+            # This ensure that there are no timeslot gaps
+            # at the start and end of the dataframe
+            .reindex(denseDateIndex, fill_value=0)
+            # Engineering some features
+            .reset_index()
+            .rename(
+                columns={
+                    "departing": "Total # Departing flights",
+                    "arriving": "Total # Arriving flights",
+                    "lowcost": "# Lowcost flights",
+                    "Traditional Scheduled": "# Traditional flights",
+                }
+            )
+            .round(2)
+            .fillna(0)
+            .query("`Timeslot` >= @start & `Timeslot` < @end")
+            .assign(airport=lambda x: airport)
+        )
+        # Generate lists to capture arrival delay, departure delay and error
+        airport_idx = airports.index(airport)
+        pred_arrival = [np.round(x[airport_idx][0], 1) for x in predictions]
+        pred_departing = [np.round(x[airport_idx][1], 1) for x in predictions]
+        mean_error = []
+
+        for i in range(0, len(predictions)):
+            error =  round((abs(predictions[i][airport_idx][0] - actual[i][airport_idx][0]) + abs(predictions[i][airport_idx][1] -actual[i][airport_idx][1]))/2)
+            mean_error.append(error)
+
+        # Add calculations to dataframe
+        Pagg["Arrival delay"] = pred_arrival
+        Pagg["Departure delay"] = pred_departing
+        Pagg["Error"] = mean_error
+        airports_data = airports_data.append(Pagg)
+
+    # Create folder for data
+    if not os.path.exists("keplerData"):
+        os.makedirs("keplerData")
+
+    flights_all = flights_all.assign(airport=lambda x: x.ADES).query(
+        "`ADEP` in @airports & `ADES` in @airports"
+    )
+
+    final = airports_data.merge(flights_all, how="left", on=["airport", "Timeslot"]) 
+    final["ADESLat"] = final["airport"].apply(lambda x: airport_dict[x]["latitude"])
+    final["ADESLong"] = final["airport"].apply(lambda x: airport_dict[x]["longitude"])
+    final.to_csv(
+        f"keplerData/Total_ICAOTOP{len(airports)}_{timeslotLength}m_{start.strftime('%Y%m%d')}_{end.strftime('%Y%m%d')}.csv"
+    )
+
+    return final
 
 
 if __name__ == "__main__":

@@ -7,6 +7,8 @@ data/
 LRData
 __pycache__
 testFolder/
+logs/
+test.ipynb
 test.py
 merge_ignore/
 *.xml
