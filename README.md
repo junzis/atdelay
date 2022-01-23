@@ -135,7 +135,11 @@ In order to access the code for the single airport prediction (for incoming airc
 
 ### Graph Neural Network
 
-TODO EDIT THIS SECTION
+The Spatial-Temporal Graph Convolution Network is a model which is used to predict the propogation of delays within a network of airports. This is done based on the connection between airports and the history of every airport. For every airport, the departure and arrival delay are predicted for the next timestep. 
+
+The code for this model can be found in the file named STGNN.ipynb . Running the cells in this note book will run the model. First settings can be adjusted, then data will be prepared for the model. After this the model can be fit or loaded from a previous run, next the model can be analized on test data and finally the output of the model can be prepared for use in a Kepler gl visualization.
+
+For this model, the GCN layer could be replaced by a GAT layer in the future to increase performance. More information on GAT layer in the spektral library can be found here: https://graphneural.network/ 
 
 ## Troubleshooting and Contact
 TODO MAYBE OR MAYBE NOT ADD THIS
