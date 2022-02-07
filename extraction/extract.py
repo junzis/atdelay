@@ -206,8 +206,6 @@ def generalFilterAirport(
     airport: str,
     saveFolder: str = "filteredData",
     forceRegenerateData: bool = False,
-    startDefault=datetime(2018, 1, 1),
-    endDefault=datetime(2019, 12, 31),
 ):
     """Generate all the flights for a single airport, save and return as dataframe
 
@@ -217,8 +215,6 @@ def generalFilterAirport(
         airport (str): ICAO code for the airport
         saveFolder (str, optional): target save folder. Defaults to "filteredData".
         forceRegenerateData (bool, optional): force regeneration of data even if it had already been generated. Defaults to False.
-        startDefault (datetime, optinoal): start date for the csv
-        endDefault (datetime, optinoal): end date for the csv
 
     Returns:
         pd.DataFrame: Dataframe with all flights for selected filters
@@ -230,8 +226,8 @@ def generalFilterAirport(
 
     # For the first cold run it generates data for all dates to prevent problems
     if not os.path.exists(file) or forceRegenerateData:
-        print(f"Generating {airport} airport data from {startDefault} to {endDefault}")
-        P = extractData(startDefault, endDefault)
+        print(f"Generating {airport} airport data from {start} to {end}")
+        P = extractData(start, end)
         P = P.query("`ADES` == @airport | `ADEP` == @airport")
         P = calculateDelays(P)
         P.to_csv(file)
@@ -260,10 +256,8 @@ def generateNNdata(
     saveFolder: str = "NNData",
     catagoricalFlightDuration: bool = False,
     forceRegenerateData: bool = False,
-    start: datetime = datetime(2018, 1, 1),
-    end: datetime = datetime(2019, 12, 31),
-    startDefault=datetime(2018, 1, 1),
-    endDefault=datetime(2019, 12, 31),
+    start=datetime(2017, 1, 1),
+    end=datetime(2019, 12, 31),
     availableMonths: list = [3, 6, 9, 12],
 ):
     """Aggregates all flights at a single airport by a certain timeslot.
@@ -283,8 +277,8 @@ def generateNNdata(
         forceRegenerateData (bool, optional): force regeneration of data even if it had already been generated. Defaults to False.
         start (datetime, optional): start date to filter for.
         end (datetime, optional): end date to filter for.
-        startDefault (datetime, optinoal): start date to generate full data. Defaults to datetime(2019, 1, 31)
-        endDefault (datetime, optinoal): end date to generate full data. Defaults to datetime(2019, 12, 31)
+        start (datetime, optinoal): start date to generate full data. Defaults to datetime(2019, 1, 31)
+        end (datetime, optinoal): end date to generate full data. Defaults to datetime(2019, 12, 31)
         availableMonths (list, optional): list of months available in \
             eurocontrol. Defaults to [March, June, September, December]
     Returns:
@@ -300,7 +294,7 @@ def generateNNdata(
         print(
             f"Generating NN data for {airport} with a timeslot length of {timeslotLength} minutes"
         )
-        P = generalFilterAirport(startDefault, endDefault, airport)
+        P = generalFilterAirport(start, end, airport)
 
         # Temporary untill weather is added:
         numRunways = 0
@@ -356,7 +350,7 @@ def generateNNdata(
                     yield start_date
                 start_date += delta
 
-        denseDateIndex = daterange(startDefault, endDefault)
+        denseDateIndex = daterange(start, end)
 
         # Functionality for airports outside of the top50
         if airport in list(airport_dict.keys()):
@@ -364,7 +358,7 @@ def generateNNdata(
         else:
             airportCapacity = 60  # this is a common value
 
-        weatherData = fetch_weather_data(airport, timeslotLength)
+        # weatherData = fetch_weather_data(airport, timeslotLength)
 
         ### get aggregate features for rolling window
         Pagg = (
@@ -384,64 +378,29 @@ def generateNNdata(
                     "departuresFlightDuration": "mean",
                     "departuresDepartureDelay": "mean",
                     "departuresArrivalDelay": "mean",
-                    "departuresFlightDuration0to3": "mean",
-                    "departuresFlightDuration3to6": "mean",
-                    "departuresFlightDuration6orMore": "mean",
-                    "arrivalsFlightDuration0to3": "mean",
-                    "arrivalsFlightDuration3to6": "mean",
-                    "arrivalsFlightDuration6orMore": "mean",
                 }
             )
             # This ensure that there are no timeslot gaps
             # at the start and end of the dataframe
             .reindex(denseDateIndex, fill_value=0)
-            # Engineering some features
             .assign(planes=lambda x: x.arriving - x.departing)
-            .assign(runways=lambda x: numRunways)
-            .assign(gates=lambda x: numGates)
             .assign(
                 capacityFilled=lambda x: (x.arriving + x.departing) / airportCapacity
             )
-            .assign(weekend=lambda x: x.index.weekday >= 5)
-            .assign(winter=lambda x: (x.index.month > 11) | (x.index.month < 3))
-            .assign(spring=lambda x: (x.index.month > 2) & (x.index.month < 6))
-            .assign(summer=lambda x: (x.index.month > 5) & (x.index.month < 9))
-            .assign(autumn=lambda x: (x.index.month > 8) & (x.index.month < 12))
-            .assign(night=lambda x: (x.index.hour >= 0) & (x.index.hour < 6))
-            .assign(morning=lambda x: (x.index.hour >= 6) & (x.index.hour < 12))
-            .assign(afternoon=lambda x: (x.index.hour >= 12) & (x.index.hour < 18))
-            .assign(evening=lambda x: (x.index.hour >= 18) & (x.index.hour <= 23))
-            .drop(["runways", "gates"], axis=1)  # Temp measure until we add weather
+            .assign(date=lambda x: x.index.round(freq="D"))
+            .assign(weekday=lambda x: x.index.weekday)
+            .assign(month=lambda x: x.index.month)
+            .assign(hour=lambda x: x.index.hour)
             .reset_index()
             .rename(columns={"timeAtAirport": "timeslot"})
             # Add weather data
-            .merge(weatherData, how="left", on="timeslot", validate="1:m")
+            # .merge(weatherData, how="left", on="timeslot", validate="1:m")
             .fillna(0)
         )
 
         # turn boolean columns into 1 and 0
         boolCols = Pagg.columns[Pagg.dtypes.eq(bool)]
         Pagg.loc[:, boolCols] = Pagg.loc[:, boolCols].astype(int)
-
-        # there are two ways the team wanted the flight
-        # duration in bins of 3 hours or as an average,
-        # here the data gets augmented based on the chase
-        if catagoricalFlightDuration:
-            Pagg = Pagg.drop(
-                ["departuresFlightDuration", "arrivalsFlightDuration"], axis=1
-            )
-        else:
-            Pagg = Pagg.drop(
-                [
-                    "departuresFlightDuration0to3",
-                    "departuresFlightDuration3to6",
-                    "departuresFlightDuration6orMore",
-                    "arrivalsFlightDuration0to3",
-                    "arrivalsFlightDuration3to6",
-                    "arrivalsFlightDuration6orMore",
-                ],
-                axis=1,
-            )
 
         Pagg.to_csv(filename)
 
@@ -454,7 +413,6 @@ def generateNNdata(
     if disableWeather:
         Pagg = Pagg.drop(
             [
-
                 "visibility",
                 "windspeed",
                 "temperature",
@@ -463,6 +421,7 @@ def generateNNdata(
                 "cape",
             ],
             axis=1,
+            errors="ignore",
         )
 
     if GNNFormat and catagoricalFlightDuration:
@@ -531,62 +490,3 @@ def generateNNdataMultiple(
         dataDict[airport] = result
 
     return dataDict
-
-
-def show_heatmap(P: pd.DataFrame, dtkey: str = None):
-    """Shows a heatmap of correlations for a pandas df
-
-    Args:
-        P (pd.DataFrame): pandas data
-        dtkey (str, optional): dt column name for removal. Defaults to None.
-    """
-
-    if dtkey is not None:
-        P = P.drop([dtkey], axis=1)
-
-    plt.matshow(P.corr(), cmap="RdBu_r", vmin=-1, vmax=1)
-    plt.xticks(range(P.shape[1]), P.columns, fontsize=12, rotation=-30)
-    plt.gca().xaxis.tick_bottom()
-    plt.yticks(range(P.shape[1]), P.columns, fontsize=14)
-
-    cb = plt.colorbar()
-    cb.ax.tick_params(labelsize=14)
-    plt.title("Feature Correlation Heatmap", fontsize=14)
-
-
-def show_raw_visualization(P: pd.DataFrame, date_time_key="timeslot"):
-    """Show features of an NN dataframe over time
-
-    Args:
-        data (pd.dataFrame): pandas dataframe in NN format
-        date_time_key (str, optional): column that provides datetime. Defaults to "timeslot".
-    """
-    ncols = 3
-    time_data = P[date_time_key]
-    feature_keys = P.columns
-    fig, axes = plt.subplots(
-        nrows=(len(feature_keys) + ncols - 1) // ncols,
-        ncols=ncols,
-        figsize=(20, 15),
-        dpi=70,
-        sharex=True,
-    )
-    for i in range(len(feature_keys)):
-        key = feature_keys[i]
-        c = plotcolors[i % (len(plotcolors))]
-        t_data = P[key]
-        t_data.index = time_data
-        t_data.head()
-        ax = t_data.plot(
-            ax=axes[i // ncols, i % ncols],
-            color=c,
-            title=key,
-            rot=25,
-        )
-        # ax.legend(key)
-        ax.grid()
-    plt.tight_layout()
-
-
-if __name__ == "__main__":
-    pass
