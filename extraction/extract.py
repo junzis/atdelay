@@ -49,6 +49,8 @@ def extractData(
 
     finalData = pd.DataFrame()
 
+    buffer = []
+
     for file in tqdm(listOfFiles):
         # read, filter and process csv
         P = pd.read_csv(file)
@@ -82,11 +84,11 @@ def extractData(
             .assign(ActualAT=lambda x: pd.to_datetime(x.ActualAT, format=dform))
             .query("ADES != ADEP")
         )
-        finalData = finalData.append(P, ignore_index=True)
+        buffer.append(P)
 
-    # finalData = finalData.
     finalData = (
-        finalData.sort_values(by=["ECTRLID"])
+        pd.concat(buffer, ignore_index=True)
+        .sort_values(by=["ECTRLID"])
         .drop_duplicates("ECTRLID")
         .reset_index(drop=True)
     )
@@ -387,7 +389,7 @@ def generateNNdata(
             .assign(
                 capacityFilled=lambda x: (x.arriving + x.departing) / airportCapacity
             )
-            .assign(date=lambda x: x.index.round(freq="D"))
+            .assign(date=lambda x: x.index.date)
             .assign(weekday=lambda x: x.index.weekday)
             .assign(month=lambda x: x.index.month)
             .assign(hour=lambda x: x.index.hour)
