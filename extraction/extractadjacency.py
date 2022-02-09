@@ -17,6 +17,7 @@ def getAdjacencyMatrix(
     end: datetime = datetime(2019, 12, 31),
     timeslotLength: int = 60,
     debug: bool = False,
+    availableMonths:list = [3, 6, 9, 12]
 ) -> np.ndarray:
     """Generate adjacency matrix for the spektral dataset based on flights between airports
 
@@ -32,7 +33,7 @@ def getAdjacencyMatrix(
 
     """
     # Create a list with all times for multiindex later:
-    def daterange(start: datetime, end: datetime):
+    def daterange(start_date: datetime, end_date: datetime):
         """Generator that yields a list of timeslots to conform the index by
 
         Args:
@@ -43,9 +44,14 @@ def getAdjacencyMatrix(
             list: list of timeslots for index
         """
         delta = timedelta(minutes=timeslotLength)
-        while start < end:
-            yield start
-            start += delta
+        while start_date < end_date:
+            if start_date.month in availableMonths:
+                # Only yields the months for which we have
+                # data specified in the argument availableMonths
+                yield start_date
+            start_date += delta
+
+
 
     dateList = daterange(start, end)
 
