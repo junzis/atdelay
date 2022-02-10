@@ -1,8 +1,7 @@
 from re import L
 import pandas as pd
-from seaborn.rcmod import axes_style
-from extraction.airportvalues import *
-from extraction.extractionvalues import *
+from preprocess.airportvalues import airport_dict
+from preprocess.common import *
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import KFold, GridSearchCV
 from sklearn.metrics import get_scorer
@@ -12,32 +11,20 @@ from sklearn.model_selection import train_test_split
 import numpy as np
 from datetime import datetime
 import matplotlib.pyplot as plt
-import sys
 import seaborn as sns
 from numpy import radians, sin, arcsin, cos, sqrt
 
 
-def filtering_data_onehot(
-    filename: str = "LRData/LRDATA.csv",
-    start: datetime = datetime(2018, 1, 1),
-    end: datetime = datetime(2019, 12, 31),
-    airport: str = "EGLL",
-    save_to_csv: bool = False,
-):
-    """Takes all the data points in a filename for a given interval of time, encodes it using it get_dummies, and focuses prediction efforts on a single airport of choosing.
+def filtering_data_onehot(df: pd.DataFrame, airport: str):
+    """Filter flights of one airport and apply onehot encoder.
 
     Args:
-        filename (str, optional): Filename of the .csv file to extract data from. Defaults to "LRData/LRDATA.csv".
-        start (datetime, optional): Starting point of the time interval. Defaults to datetime(2018, 1, 1).
-        end (datetime, optional): Ending point of the time interval. Defaults to datetime(2019, 12, 31).
-        airport (str, optional): Airport codename. Defaults to "EGLL" (Heathrow Airport).
-        airport_capacity (int, optional): Capacity of airport per hour defined as maximum movements per hour possible. Defaults to 88.
-
+        df (pd.DataFrame): flights data.
+        airport (str): Airport ICAO codename.
 
     Returns:
         tuple: Array with all relevant features of the dataset and another array of target variables.
     """
-    df = pd.read_csv(filename, header=0, index_col=0)
 
     dform = "%Y-%m-%d %H:%M:%S"
     df = (
@@ -50,13 +37,6 @@ def filtering_data_onehot(
     df_3 = dummies_encode(df_time_distance, airport)
     X_final = scaler(df_3)
     y = df_capacity["ArrivalDelay"].to_numpy()
-
-    if save_to_csv:
-        pd.DataFrame((df_3)).to_csv("data/finaldf.csv", header=True, index=False)
-        pd.DataFrame((X_final)).to_csv("data/xdata.csv", header=False, index=False)
-        print("-------Regression model DataFrame to .csv: DONE-------")
-        pd.DataFrame((y)).to_csv("data/ydata.csv", header=False, index=False)
-        print("-------Regression model target variables to .csv: DONE-------")
 
     return X_final, y
 
@@ -94,7 +74,7 @@ def capacity_calc(P: pd.DataFrame, airport: str = "EGLL", airport_capacity: int 
     Returns:
         pd.DataFrame: dataframe with capacity of airport at time of flight
     """
-    airportlist = ICAOTOP50
+    airportlist = airports_top50
     dform = "%Y-%m-%d %H:%M:%S"
     P = P.assign(FiledOBT=lambda x: pd.to_datetime(x.FiledOBT, format=dform))
 
@@ -116,7 +96,7 @@ def capacity_calc(P: pd.DataFrame, airport: str = "EGLL", airport_capacity: int 
 
     new_df = pd.concat([dep, des], axis=0)
     new_df.Time = new_df.Time.apply(
-        lambda x: pd.datetime(x.year, x.month, x.day, x.hour, x.minute // 15 * 15, 0)
+        lambda x: datetime(x.year, x.month, x.day, x.hour, x.minute // 15 * 15, 0)
     )
     times = pd.DatetimeIndex(new_df.Time)
     K = new_df.groupby([times.date, times.hour, times.minute])["ADES"].count()
@@ -317,7 +297,7 @@ def parameter_search(
     return best_parameters, prediction, y_test
 
 
-def plot(
+def jointplot(
     df: pd.DataFrame,
     x_name: str,
     y_name: str,

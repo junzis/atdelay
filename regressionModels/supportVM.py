@@ -12,7 +12,6 @@ import sys
 
 print('importing from tool box...')
 sys.path.append(".")
-# from tools.tool_box import double_cross_validation
 from tool_box import parameter_search
 from tool_box import filtering_data_onehot
 from tool_box import plot
