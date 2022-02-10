@@ -6,10 +6,11 @@ airports_top10 = [
     "EDDF",
     "LEMD",
     "LEBL",
-    "LTFM",
+    # "LTFM",
     "UUEE",
     "EDDM",
     "EGKK",
+    "LIRF",
 ]
 airports_top25 = [
     "EGLL",
@@ -18,7 +19,7 @@ airports_top25 = [
     "EDDF",
     "LEMD",
     "LEBL",
-    "LTFM",
+    # "LTFM",
     "UUEE",
     "EDDM",
     "EGKK",
@@ -37,6 +38,7 @@ airports_top25 = [
     "EGSS",
     "EBBR",
     "ESSA",
+    "LGAV",
 ]
 
 airports_top50 = [

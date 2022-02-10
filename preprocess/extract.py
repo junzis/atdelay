@@ -252,13 +252,13 @@ def generalFilterAirport(
 
 def generateNNdata(
     airport: str,
-    timeslotLength: int = 15,
+    timeinterval: int = 30,
     GNNFormat: bool = False,
     disableWeather: bool = True,
     saveFolder: str = "data/nn",
     catagoricalFlightDuration: bool = False,
     forceRegenerateData: bool = False,
-    start=datetime(2017, 1, 1),
+    start=datetime(2018, 1, 1),
     end=datetime(2019, 12, 31),
     availableMonths: list = [3, 6, 9, 12],
 ):
@@ -266,7 +266,7 @@ def generateNNdata(
 
     Args:
         airport (str): ICAO code for a single airport
-        timeslotLength (int, optional): length to aggregate flights for in minutes. Defaults to 15 minutes.
+        timeinterval (int, optional): length to aggregate flights for in minutes. Defaults to 15 minutes.
         GNNFormat: (bool, optional): returns the data in format used for GNN model (df_agg, Y, T). Defaults to False
         disableWeather: (bool, optional): disables weather features:\
              (["timeslot", "visibility", "windspeed",\
@@ -286,7 +286,7 @@ def generateNNdata(
     Returns:
         pd.Dataframe: pandas dataframe with aggregate flight data, unscaled.
     """
-    filename = f"{saveFolder}/{airport}_{timeslotLength}m.csv"
+    filename = f"{saveFolder}/{airport}_{timeinterval}m.csv"
 
     dform = "%Y-%m-%d %H:%M:%S"
     if not os.path.exists(saveFolder):
@@ -294,7 +294,7 @@ def generateNNdata(
 
     if not os.path.exists(filename) or forceRegenerateData:
         print(
-            f"Generating NN data for {airport} with a timeslot length of {timeslotLength} minutes"
+            f"Generating NN data for {airport} with a timeslot length of {timeinterval} minutes"
         )
         df = generalFilterAirport(start, end, airport)
 
@@ -344,7 +344,7 @@ def generateNNdata(
 
         # This creates a new index to ensure that we have no gaps in the timeslots later
         def daterange(start_date, end_date):
-            delta = timedelta(minutes=timeslotLength)
+            delta = timedelta(minutes=timeinterval)
             while start_date < end_date:
                 if start_date.month in availableMonths:
                     # Only yields the months for which we have
@@ -360,13 +360,13 @@ def generateNNdata(
         else:
             airportCapacity = 60  # this is a common value
 
-        # weatherData = fetch_weather_data(airport, timeslotLength)
+        # weatherData = fetch_weather_data(airport, timeinterval)
 
         ### get aggregate features for rolling window
         df_agg = (
             df.groupby(
                 [
-                    pd.Grouper(key="timeAtAirport", freq=f"{timeslotLength}min"),
+                    pd.Grouper(key="timeAtAirport", freq=f"{timeinterval}min"),
                 ]
             )
             .agg(
@@ -441,7 +441,7 @@ def generateNNdata(
                 "arrivalsArrivalDelay",
                 "departuresDepartureDelay",
                 "departuresArrivalDelay",
-                "timeslot",
+                # "timeslot",
                 "planes",
                 "arrivalsDepartureDelay",
             ],
@@ -454,7 +454,7 @@ def generateNNdata(
 
 def generateNNdataMultiple(
     airports: list,
-    timeslotLength: int = 15,
+    timeinterval: int = 30,
     GNNFormat: bool = False,
     disableWeather: bool = True,
     saveFolder: str = "data/nn",
@@ -466,7 +466,7 @@ def generateNNdataMultiple(
 
     Args:
         airports (list): list of ICAO airport codes
-        timeslotLength (int, optional): length to aggregate flights for in minutes. Defaults to 15 minutes.
+        timeinterval (int, optional): length to aggregate flights for in minutes. Defaults to 15 minutes.
         GNNFormat: (bool, optional): returns the data in format used for GNN model (df_agg, Y, T). Defaults to False
         disableWeather: (bool, optional): disables weather features:\
                         (["timeslot", "visibility", "windspeed",\
@@ -484,7 +484,7 @@ def generateNNdataMultiple(
     for airport in tqdm(airports):
         result = generateNNdata(
             airport,
-            timeslotLength,
+            timeinterval,
             GNNFormat,
             disableWeather,
             saveFolder,
