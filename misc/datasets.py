@@ -4,12 +4,11 @@ import networkx as nx
 import matplotlib.pyplot as plt
 import scipy.sparse as sp
 import tensorflow as tf
-import networkx as nx
 from datetime import datetime
 
 from spektral.data import Dataset, DisjointLoader, Graph
 
-from extraction.extractadjacency import distance_weight_adjacency
+from tools.extractadjacency import distance_weight_adjacency
 
 from . import generateNNdataMultiple
 from . import getAdjacencyMatrix

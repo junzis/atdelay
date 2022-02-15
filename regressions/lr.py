@@ -11,8 +11,8 @@ from datetime import datetime
 import matplotlib.pyplot as plt
 
 sys.path.append(".")
-from regressionModels.tool_box import filtering_data_onehot
-from regressionModels.tool_box import parameter_search, get_data
+from tool_box import filtering_data_onehot
+from tool_box import parameter_search, get_data
 
 
 def linear_regression_model(start_degree: int = 1, stop_degree: int = 2):
@@ -41,8 +41,7 @@ def linear_regression_model(start_degree: int = 1, stop_degree: int = 2):
 
 
 def plot_errors(start_degree: int = 1, stop_degree: int = 2):
-    """Plots errors vs. the number of degrees of each regressor
-    """
+    """Plots errors vs. the number of degrees of each regressor"""
 
     scores = linear_regression_model(start_degree, stop_degree)
     plt.plot([x for x in range(start_degree, stop_degree)], scores)
@@ -50,4 +49,3 @@ def plot_errors(start_degree: int = 1, stop_degree: int = 2):
     plt.xlabel("Polynomial degree")
     plt.ylabel("MSE")
     plt.show()
-

@@ -1,50 +1,94 @@
-# Air-traffic-delays-prediction-model
+# Machine Learning Air Traffic Delays Prediction Models
 
-  
-This project is part of the Capstone Project (TI3150TU) of the minor Engineering with AI at Delft University of Technology.
+This repository includes the source code of Machine learning models for predicting air traffic delays at different levels, which are flight-level, airport-level, and network-level. The repository contains the following models:
 
-## Contributors
-The following people contributed to the project:
-
-* Tristan Dijkstra
-* Niels Prins
-* Constantinos Aristodemou
-* Benjamin Slijper
-* Theodor Falat
-* Vlad Buzetelu
-* Tim Hogenelst
-
-## Project description
-The aim of this project is to build a model which can predict airport traffic delay propagation. This will be done using both flight plans and actual flight trajectories collected over the entire Europe between 2015 and 2019. See [**Data**](#data) for more information.
-
-This project consists of two parts:
-
-1. A machine learning model to predict delays at single airports;
-2. A neural network to predict the propagation of delays through the air traffic network.
-
-#### Single airport prediction
-A Random Forest regression model was used to obtain delays at individual airports. Features such as airline, planned arrival time and airport capacity were used as input to predict the target variable, which is *arrival delay*. 
-
-#### Delay propagation
-some summary about delay propagation
+1. Random Forest model: Predicts arrival delays for individual flights
+2. LSTM model: Predicts aggregated arrival and departure delays for a single airport
+3. DST-GAT model: Predicts aggregated arrival and departure delays of all airports a network
 
 
-## Installation steps
-This package requires the following other programs or packages to be installed:
-* add prerequisite packages (and link to install if applicable?)
+## Models
 
-You can install the package by running the following command in the command prompt:
-```
-pip install Air-traffic-delays-prediction-model or something like this
-```
+### Individual flight prediction
+A Random Forest regression model was used to obtain flights' arrival delays at an airport. Features such as airline, planned arrival time, and airport capacity were used as input to predict the target variable (arrival delay).
 
+The code for this model can be found in the notebook: `flight_arr_delay_rf.ipynb`.
 
-## How to use
-description of workflow (something to do with the notebooks maybe? or some other kind of code example)
+### Single airport prediction
+
+Single airport delay prediction focuses on the arrival and departure delays of any given airport using a long-short term memory recurrent network (LSTM) model.
+
+The code for this model can be found in the notebook: `network_delay_gnn.ipynb`.
+
+### Graph Neural Network
+
+The dynamic spatial-temporal graph attention network (DST-GAT) is a model which is used to predict the delays for a network of airports. This is done based on the connection between airports and the history of every airport. For every airport, the departure and arrival delays are predicted for several lookahead time steps. 
+
+The code for this model can be found in the notebook: `network_delay_gnn.ipynb`.
+
+## Python library dependencies
+
+The following libraries are needed to run the code in this repository:
+
+- numpy
+- scipy
+- pandas
+- scikit_learn
+- keras
+- spektral
+- tensorflow
+
+### Configuring TensorFlow GPU functionality (Optional)
+Training neural networks and in particular, Graph Neural Networks tends to be quite slow. We therefore also recommend configuring TensorFlow to work with a graphics card (CUDA compatible NVIDIA GPU required). To do this some additional dependencies should be installed (see Tensorflow GPU guide). Importantly, all the versions should be compatible. Figuring out which versions to install can be tricky. At the time of submission, the following versions were used and should be compatible:
+
+- Tensorflow 2.7.0
+- CUDA Toolkit 11.2
+- cudnn 8.1.0
+
+Details on where to find and how to install the dependencies can be found here:
+
+- [Tensorflow GPU guide](https://www.tensorflow.org/install/gpu)
+- [cudnn install guide](https://docs.nvidia.com/deeplearning/cudnn/install-guide/index.html#install-windows)
+
 
 ## Data 
-An overview of all of the various data sources used for feature engineering:
+Currently, the tools use 2 main sets of data:
+- [EUROCONTROL R&D data](https://www.eurocontrol.int/dashboard/rnd-data-archive): not provided with this software. You need to request a license and download the data on your own.
+- Airport coordinates: provided in `tools.constants.py` for European top 50 airports.
 
-* Flight data was taken from the EUROCONTROL R&D Archive
-* capacity data
-* top 50 airport data
+Many of the functions in `tools/extract.py` have generate, write, and read capabilities, which means they generate the full data on the first cold run and return the stored filtered data from the data on subsequent runs.
+
+
+Your file tree should look something like this:
+```
+[repostiont root]
+├───data
+│   ├───2018
+│   │   ├───201803
+│   │   ├───201806
+│   │   ├───201809
+│   │   └───201812
+│   ├───2019
+│   │   ├───...
+│
+├───[other files]
+.   .
+.
+.
+.
+```
+
+
+## Contributors
+
+This software was created and extended upon a TU Delft's Capstone Project (TI3150TU) for the minor Engineering with AI. The following people contributed to the code:
+
+* Constantinos Aristodemou [@ConstantinosAr](https://github.com/ConstantinosAr)
+* Vlad Buzetelu [@vladbuzetelu](https://github.com/vladbuzetelu)
+* Tristan Dijkstra [@IrTrez](https://github.com/IrTrez)
+* Theodor Falat [@theofalat](https://github.com/theofalat)
+* Tim Hogenelst [@TimGioHog](https://github.com/TimGioHog)
+* Niels Prins [@Niels](https://github.com/Niels)-Prins 
+* Benjamin Slijper [@BenjaminSlijper](https://github.com/BenjaminSlijper)
+* Junzi Sun [@junzis](https://github.com/junzis)  (project tutor)
+

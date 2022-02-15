@@ -1,8 +1,8 @@
-from preprocess.extract import *
+from tools.extract import generateNNdata
+from datetime import datetime
 import seaborn as sns
 
-
-airport = "EHAM"
+airport = "EGLL"
 
 X = generateNNdata(
     airport,
@@ -18,10 +18,20 @@ DropThese = [
     "date",
 ]
 
-ticks = ['Departing Flights', 'Arriving flights', 'Fraction low-cost', 'Mean arrival flight duration',     
-       'Average arrival delay', 'Mean departure flight duration',
-       'Average departure delay', 'Planes at airport', 'Filled capacity airport', 'Day of week',
-       'Month', 'Hour of day']
+ticks = [
+    "Departing Flights",
+    "Arriving flights",
+    "Fraction low-cost",
+    "Mean arrival flight duration",
+    "Average arrival delay",
+    "Mean departure flight duration",
+    "Average departure delay",
+    "Planes at airport",
+    "Filled capacity airport",
+    "Day of week",
+    "Month",
+    "Hour of day",
+]
 
 X = X.drop(DropThese, axis=1).corr().round(2)
 print(X.columns)
@@ -40,5 +50,5 @@ heat_map = sns.heatmap(
     # xticklabels=ticks,
     yticklabels=ticks,
 )
-heat_map.set_xticklabels(ticks,rotation = 30, ha="right")
+heat_map.set_xticklabels(ticks, rotation=30, ha="right")
 plt.show()

@@ -3,10 +3,7 @@ import os
 from glob import glob
 from datetime import datetime, timedelta
 from tqdm import tqdm
-import matplotlib.pyplot as plt
-from preprocess.common import airports_top50, marketSegments
-from preprocess.airportvalues import airport_dict
-from preprocess.weather import fetch_weather_data
+from tools.constants import airports_top50, marketSegments, airport_dict
 
 
 def extractData(

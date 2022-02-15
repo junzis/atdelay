@@ -1,11 +1,10 @@
+tmp*
 data/
 *.csv
 *.csv.gz
 *.zip
-.vscode
 *.pdf
 LRData
-__pycache__
 testFolder/
 test.py
 merge_ignore/
@@ -15,6 +14,7 @@ merge_ignore/
 .idea/workspace.xml
 test.py
 logs/
+
 
 
 # Byte-compiled / optimized / DLL files

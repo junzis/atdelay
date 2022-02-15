@@ -1,11 +1,6 @@
-from re import L
 import pandas as pd
-from preprocess.airportvalues import airport_dict
-from preprocess.common import *
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import KFold, GridSearchCV
-from sklearn.metrics import get_scorer
-from sklearn.svm import SVR
 from sklearn.neighbors import KNeighborsRegressor
 from sklearn.model_selection import train_test_split
 import numpy as np
@@ -13,6 +8,9 @@ from datetime import datetime
 import matplotlib.pyplot as plt
 import seaborn as sns
 from numpy import radians, sin, arcsin, cos, sqrt
+
+from tools.constants import airport_dict
+from tools.constants import *
 
 
 def filtering_data_onehot(df: pd.DataFrame, airport: str):
