@@ -1,30 +1,26 @@
 # Machine Learning Air Traffic Delays Prediction Models
 
-This repository includes the source code of Machine learning models for predicting air traffic delays at different levels, which are flight-level, airport-level, and network-level. The repository contains the following models:
+This repository includes the source code of Machine learning models for predicting air traffic delays at different airport and the network of airports, using the following models:
 
-1. Random Forest model: Predicts arrival delays for individual flights
-2. LSTM model: Predicts aggregated arrival and departure delays for a single airport
-3. DST-GAT model: Predicts aggregated arrival and departure delays of all airports a network
+1. LSTM model: Predicts aggregated arrival and departure delays for a single airport
+2. DST-GAT model: Predicts aggregated arrival and departure delays of all airports a network
 
 
 ## Models
 
-### Individual flight prediction
-A Random Forest regression model was used to obtain flights' arrival delays at an airport. Features such as airline, planned arrival time, and airport capacity were used as input to predict the target variable (arrival delay).
-
-The code for this model can be found in the notebook: `flight_arr_delay_rf.ipynb`.
 
 ### Single airport prediction
 
 Single airport delay prediction focuses on the arrival and departure delays of any given airport using a long-short term memory recurrent network (LSTM) model.
 
-The code for this model can be found in the notebook: `network_delay_gnn.ipynb`.
+The code for this model can be found in the notebook: `lstm.ipynb`.
 
 ### Graph Neural Network
 
 The dynamic spatial-temporal graph attention network (DST-GAT) is a model which is used to predict the delays for a network of airports. This is done based on the connection between airports and the history of every airport. For every airport, the departure and arrival delays are predicted for several lookahead time steps. 
 
-The code for this model can be found in the notebook: `network_delay_gnn.ipynb`.
+The code for this model can be found in the notebook: `dstgat.ipynb`.
+
 
 ## Python library dependencies
 
@@ -38,12 +34,9 @@ The following libraries are needed to run the code in this repository:
 - spektral
 - tensorflow
 
-### Configuring TensorFlow GPU functionality (Optional)
-Training neural networks and in particular, Graph Neural Networks tends to be quite slow. We therefore also recommend configuring TensorFlow to work with a graphics card (CUDA compatible NVIDIA GPU required). To do this some additional dependencies should be installed (see Tensorflow GPU guide). Importantly, all the versions should be compatible. Figuring out which versions to install can be tricky. At the time of submission, the following versions were used and should be compatible:
 
-- Tensorflow 2.7.0
-- CUDA Toolkit 11.2
-- cudnn 8.1.0
+### Configuring TensorFlow GPU functionality (Optional)
+Training neural networks and in particular, Graph Neural Networks tends to be quite slow. We therefore also recommend configuring TensorFlow to work with a graphics card (CUDA compatible NVIDIA GPU required). To do this some additional dependencies should be installed (see Tensorflow GPU guide). Importantly, all the versions should be compatible.
 
 Details on where to find and how to install the dependencies can be found here:
 
@@ -69,8 +62,12 @@ Your file tree should look something like this:
 │   │   ├───201809
 │   │   └───201812
 │   ├───2019
-│   │   ├───...
-│
+│   │   ├───201903
+│   │   ├───201906
+│   │   ├───201909
+│   │   └───201912
+│   ...
+|
 ├───[other files]
 .   .
 .
@@ -81,8 +78,9 @@ Your file tree should look something like this:
 
 ## Contributors
 
-This software was created and extended upon a TU Delft's Capstone Project (TI3150TU) for the minor Engineering with AI. The following people contributed to the code:
+This software was originated from a TU Delft's Capstone Project (TI3150TU). The following people contributed to the orignal code:
 
+* Junzi Sun [@junzis](https://github.com/junzis) (project tutor)
 * Constantinos Aristodemou [@ConstantinosAr](https://github.com/ConstantinosAr)
 * Vlad Buzetelu [@vladbuzetelu](https://github.com/vladbuzetelu)
 * Tristan Dijkstra [@IrTrez](https://github.com/IrTrez)
@@ -90,5 +88,4 @@ This software was created and extended upon a TU Delft's Capstone Project (TI315
 * Tim Hogenelst [@TimGioHog](https://github.com/TimGioHog)
 * Niels Prins [@Niels](https://github.com/Niels)-Prins 
 * Benjamin Slijper [@BenjaminSlijper](https://github.com/BenjaminSlijper)
-* Junzi Sun [@junzis](https://github.com/junzis)  (project tutor)
 

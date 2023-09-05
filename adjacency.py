@@ -122,3 +122,25 @@ def throughput_adjacency(df, airports, start, end, timeinterval, date_filter):
     final_matrix = np.divide(mat3d, new_maximum)
 
     return final_matrix
+
+
+# #%%
+# (
+#     df_all.groupby(["timeslot", "ap0", "ap1"])
+#     .agg(
+#         {
+#             "flight_id": "count",
+#             "duration_planned": "mean",
+#             "delay_departure": "mean",
+#             "delay_arrival": "mean",
+
+#         }
+#     )
+#     # .reindex(timeslots, level=0, fill_value=0)
+#     .rename(
+#         columns={
+#             "flight_id": "flights",
+#             "duration_planned": "departure_duration",
+#         }
+#     )
+# )
